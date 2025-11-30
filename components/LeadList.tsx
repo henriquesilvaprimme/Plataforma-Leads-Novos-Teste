@@ -196,23 +196,15 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
         ${cardStyle} rounded-xl shadow-sm border transition-all duration-300 w-full text-base relative
         ${isSplitView ? 'md:grid md:grid-cols-2' : 'flex flex-col'}
     `}>
-      <div className={`p-1.5 flex flex-col justify-between gap-0 ${isSplitView ? `border-r ${borderColor}` : ''}`}>
+      <div className={`p-2 flex flex-col justify-between gap-0.5 ${isSplitView ? `border-r ${borderColor}` : ''}`}>
         
-        <div className="flex flex-col gap-0">
+        <div className="flex flex-col gap-0.5">
             <div className="flex justify-between items-start">
-                <div className="flex flex-col gap-0">
-                    <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
                         <h3 className="font-bold text-base text-gray-900 leading-tight">{lead.name}</h3>
-                        
-                        {/* Status Badge moved next to Name */}
-                         {!isEditingStatus && (
-                            <span className={`inline-block px-1.5 py-0 rounded-md text-[9px] font-bold uppercase tracking-wide border ${getStatusColor(lead.status)}`}>
-                                {lead.status}
-                            </span>
-                         )}
-
                         {lead.aiScore !== undefined && (
-                            <div className="flex items-center gap-0.5 bg-indigo-50 px-1.5 py-0.5 rounded text-[9px] font-bold text-indigo-700 border border-indigo-100">
+                            <div className="flex items-center gap-0.5 bg-indigo-50 px-1.5 py-0.5 rounded text-[10px] font-bold text-indigo-700 border border-indigo-100">
                             <BrainCircuit className="w-3 h-3" />
                             {lead.aiScore}
                             </div>
@@ -220,8 +212,13 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                     </div>
                     
                     <div className="flex flex-wrap items-center gap-2">
+                         {!isEditingStatus && (
+                            <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(lead.status)}`}>
+                                {lead.status}
+                            </span>
+                         )}
                         {lead.status === LeadStatus.SCHEDULED && lead.scheduledDate && !isEditingStatus && (
-                            <span className="text-[9px] font-medium text-purple-700 flex items-center gap-1 bg-purple-50 px-1.5 py-0 rounded-md border border-purple-200 mt-0.5">
+                            <span className="text-[10px] font-medium text-purple-700 flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
                                 <Calendar className="w-3 h-3" />
                                 {new Date(lead.scheduledDate).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' })}
                             </span>
@@ -230,17 +227,17 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                 </div>
 
                 {isScheduledToday && (
-                    <div className="text-orange-600 bg-orange-50 p-0.5 rounded-md border border-orange-200 shadow-sm animate-pulse" title="Agendamento Hoje">
+                    <div className="text-orange-600 bg-orange-50 p-1 rounded-md border border-orange-200 shadow-sm animate-pulse" title="Agendamento Hoje">
                         <Bell className="w-3 h-3" />
                     </div>
                 )}
             </div>
 
-            <div className="flex flex-col gap-0 text-gray-800 text-xs mt-0.5">
+            <div className="flex flex-col gap-0.5 text-gray-800 text-xs">
                 <div className="flex items-center gap-2">
                     <Car className="w-3 h-3 text-gray-400 shrink-0" />
                     <span className="font-semibold text-gray-900">{lead.vehicleModel}</span>
-                    <span className="text-[9px] text-gray-500">({lead.vehicleYear})</span>
+                    <span className="text-[10px] text-gray-500">({lead.vehicleYear})</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
@@ -258,16 +255,19 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                     <span className="font-medium text-indigo-700">{lead.insuranceType}</span>
                 </div>
 
-                <div className="mt-0.5">
-                    {/* If editing status, show controls. If not, only show Alterar button if not locked. Status text is now near name. */}
+                <div className="mt-1">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5 block">
+                        Status do Lead
+                    </label>
+                    
                     {isEditingStatus ? (
-                        <div className="flex gap-1 mt-1">
+                        <div className="flex gap-1">
                             <select 
-                                className="w-36 bg-white border border-gray-300 text-[10px] rounded px-1 py-0.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm font-medium text-gray-700"
+                                className="w-36 bg-white border border-gray-300 text-xs rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm font-medium text-gray-700"
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value as LeadStatus)}
                             >
-                                <option value="">-- Selecione Status --</option>
+                                <option value="">-- Selecione --</option>
                                 {Object.values(LeadStatus).filter(s => s !== LeadStatus.NEW).map(s => (
                                     <option key={s} value={s}>{s}</option>
                                 ))}
@@ -276,7 +276,7 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                                 onClick={handleConfirmStatus}
                                 disabled={!isValidToSave()}
                                 className={`
-                                    px-2 py-0.5 rounded text-[10px] font-bold transition-all shadow-sm border
+                                    px-3 py-1 rounded text-xs font-bold transition-all shadow-sm border
                                     ${isValidToSave() 
                                         ? 'bg-green-600 hover:bg-green-700 text-white border-green-700' 
                                         : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}
@@ -287,12 +287,13 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                         </div>
                     ) : (
                         <div className="flex items-center justify-between">
+                             {/* Esconde botão alterar se estiver bloqueado (fechado/perdido) e não for admin */}
                              {!isLocked && (
                                 <button 
                                     onClick={() => setIsEditingStatus(true)}
-                                    className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-2 py-0.5 rounded text-[9px] font-bold transition-colors shadow-sm uppercase tracking-wide w-auto mt-0.5"
+                                    className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-3 py-1 rounded text-[10px] font-bold transition-colors shadow-sm uppercase tracking-wide w-auto"
                                 >
-                                    Alterar Status
+                                    Alterar
                                 </button>
                              )}
                         </div>
@@ -300,23 +301,24 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-0 pt-0.5 border-t border-gray-100 mt-0.5">
-                 <div className="flex flex-col gap-0">
-                    <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+            <div className="grid grid-cols-1 gap-0.5 pt-1 border-t border-gray-100 mt-0.5">
+                 <div className="flex flex-col gap-0.5">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
                         <Users className="w-3 h-3" /> Responsável
                     </label>
                     
+                    {/* Se não for admin, só mostra o texto. Se for admin, mostra controles */}
                     {!isAdmin ? (
-                        <div className="flex items-center justify-between bg-gray-50 p-1 rounded border border-gray-200">
-                             <span className="text-[10px] font-bold text-gray-700 truncate mr-2">
-                                <span className="text-indigo-700">{lead.assignedTo || 'Ninguém'}</span>
+                        <div className="flex items-center justify-between bg-gray-50 p-1.5 rounded border border-gray-200">
+                             <span className="text-xs font-bold text-gray-700 truncate mr-2">
+                                Atribuído para: <span className="text-indigo-700">{lead.assignedTo || 'Ninguém'}</span>
                              </span>
                         </div>
                     ) : (
                         isEditingUser ? (
                             <div className="flex gap-1">
                                 <select 
-                                    className="w-36 bg-white border border-gray-300 text-[10px] rounded px-1 py-0.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-gray-700 font-medium"
+                                    className="w-36 bg-white border border-gray-300 text-xs rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-gray-700 font-medium"
                                     value={selectedUser}
                                     onChange={(e) => setSelectedUser(e.target.value)}
                                 >
@@ -338,19 +340,19 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                                             handleConfirmUser();
                                         }
                                     }}
-                                    className="bg-indigo-600 text-white border border-indigo-700 hover:bg-indigo-700 px-2 py-0.5 rounded text-[9px] font-bold transition-colors shadow-sm uppercase tracking-wide"
+                                    className="bg-indigo-600 text-white border border-indigo-700 hover:bg-indigo-700 px-3 py-1 rounded text-xs font-bold transition-colors shadow-sm uppercase tracking-wide"
                                 >
                                     Atribuir
                                 </button>
                             </div>
                         ) : (
-                            <div className="flex items-center justify-between bg-gray-50 p-1 rounded border border-gray-200">
-                                <span className="text-[10px] font-bold text-gray-700 truncate mr-2">
-                                    <span className="text-indigo-700">{lead.assignedTo || 'Sem Dono'}</span>
+                            <div className="flex items-center justify-between bg-gray-50 p-1.5 rounded border border-gray-200">
+                                <span className="text-xs font-bold text-gray-700 truncate mr-2">
+                                    Atribuído para: <span className="text-indigo-700">{lead.assignedTo}</span>
                                 </span>
                                 <button 
                                     onClick={() => setIsEditingUser(true)}
-                                    className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-1.5 py-0 rounded text-[9px] font-bold transition-colors shadow-sm uppercase tracking-wide"
+                                    className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-2 py-0.5 rounded text-[10px] font-bold transition-colors shadow-sm uppercase tracking-wide"
                                 >
                                     Alterar
                                 </button>
@@ -361,8 +363,8 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
             </div>
         </div>
 
-        <div className="mt-0.5 pt-0.5 flex items-center justify-end border-t border-gray-200">
-            <div className="text-[9px] text-gray-400 font-medium">
+        <div className="mt-1 pt-1 flex items-center justify-end border-t border-gray-200">
+            <div className="text-[10px] text-gray-400 font-medium">
                 Criado em: {formatCreationDate(lead.createdAt)}
             </div>
         </div>
@@ -370,41 +372,41 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
 
       {isSplitView && (
         <div className={`
-            p-1.5 flex flex-col gap-1 animate-fade-in border-l
+            p-2 flex flex-col gap-2 animate-fade-in border-l
             ${lead.status === LeadStatus.CLOSED ? borderColor : `bg-gray-50 ${borderColor}`}
         `}>
             
             {hasDealInfo ? (
-                <div className="flex flex-col gap-0.5 h-full">
-                     <h4 className="text-[10px] font-bold text-green-700 uppercase tracking-wide border-b border-green-200 pb-0.5 flex items-center gap-1">
+                <div className="flex flex-col gap-1 h-full">
+                     <h4 className="text-xs font-bold text-green-700 uppercase tracking-wide border-b border-green-200 pb-1 flex items-center gap-1">
                         <Shield className="w-3 h-3"/> Venda Confirmada
                      </h4>
-                     <div className="flex-1 text-[10px] space-y-0.5 overflow-y-auto text-gray-700">
+                     <div className="flex-1 text-xs space-y-1 overflow-y-auto text-gray-700">
                         <div className="grid grid-cols-2 gap-1">
                             <div>
-                                <span className="block text-gray-400 uppercase">Seguradora</span>
+                                <span className="block text-gray-400 text-[10px] uppercase">Seguradora</span>
                                 <span className="font-semibold">{lead.dealInfo?.insurer}</span>
                             </div>
                              <div>
-                                <span className="block text-gray-400 uppercase">Pagamento</span>
+                                <span className="block text-gray-400 text-[10px] uppercase">Pagamento</span>
                                 <span className="font-semibold">{lead.dealInfo?.installments}</span>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-1">
                              <div>
-                                <span className="block text-gray-400 uppercase">Prêmio</span>
+                                <span className="block text-gray-400 text-[10px] uppercase">Prêmio</span>
                                 <span className="font-semibold text-green-700">
                                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lead.dealInfo?.netPremium || 0)}
                                 </span>
                             </div>
                              <div>
-                                <span className="block text-gray-400 uppercase">Comissão</span>
+                                <span className="block text-gray-400 text-[10px] uppercase">Comissão</span>
                                 <span className="font-semibold">{lead.dealInfo?.commission}%</span>
                             </div>
                         </div>
-                        <div className="border-t border-gray-200 pt-0.5 mt-0.5">
-                             <span className="block text-gray-400 uppercase">Vigência</span>
-                             <span className="font-medium block">
+                        <div className="border-t border-gray-200 pt-1 mt-1">
+                             <span className="block text-gray-400 text-[10px] uppercase">Vigência</span>
+                             <span className="font-medium block mt-0.5">
                                 {formatDisplayDate(lead.dealInfo?.startDate)}
                                 <span className="mx-1 text-gray-400">até</span> 
                                 {formatDisplayDate(lead.dealInfo?.endDate)}
@@ -414,20 +416,20 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                 </div>
             ) : (
                 <>
-                    <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wide border-b border-gray-200 pb-0.5">
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide border-b border-gray-200 pb-1">
                         Complemento
                     </h4>
                     
                     {needsDate && (
                         <div>
-                            <label className="text-[9px] font-bold text-gray-500 uppercase mb-0 block">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-0.5 block">
                                 <span className="flex items-center gap-1"><Calendar className="w-3 h-3"/> Data e Hora</span>
                             </label>
                             <input 
                                 type="datetime-local" 
                                 disabled={!isEditingStatus}
                                 className={`
-                                    w-full border rounded px-1 py-0.5 text-[10px] focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm
+                                    w-full border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm
                                     ${!isEditingStatus ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300'}
                                 `}
                                 value={scheduleDate}
@@ -438,12 +440,12 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
 
                     {needsObservation && (
                             <div className="flex-1 flex flex-col">
-                            <label className="text-[9px] font-bold text-gray-500 uppercase mb-0 block">Observações</label>
+                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-0.5 block">Observações</label>
                             <textarea 
                                 disabled={!isEditingStatus}
                                 placeholder="Insira os detalhes aqui..."
                                 className={`
-                                    w-full border rounded px-1 py-1 text-[10px] focus:ring-1 focus:ring-indigo-500 outline-none resize-none flex-1 shadow-inner
+                                    w-full border rounded px-2 py-2 text-xs focus:ring-1 focus:ring-indigo-500 outline-none resize-none flex-1 shadow-inner
                                     ${!isEditingStatus ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300'}
                                 `}
                                 value={observation}
@@ -453,7 +455,7 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                     )}
                     
                     {isEditingStatus && (
-                        <div className="text-[9px] text-gray-400 italic text-center">
+                        <div className="text-[10px] text-gray-400 italic text-center">
                             Preencha e clique em Confirmar.
                         </div>
                     )}
@@ -688,7 +690,7 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, 
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 pb-4 overflow-y-auto w-full px-1 flex-1">
+      <div className="flex flex-col gap-4 pb-4 overflow-y-auto w-full px-1 flex-1">
         {paginatedLeads.map((lead) => (
             <LeadCard 
                 key={lead.id} 
