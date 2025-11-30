@@ -9,46 +9,27 @@ interface LeadListProps {
   onSelectLead: (lead: Lead) => void;
   onUpdateLead: (lead: Lead) => void;
   onAddLead: (lead: Lead) => void;
+  currentUser: User | null;
 }
 
-// Lista de Seguradoras
 const INSURERS_LIST = [
-  "Porto Seguro",
-  "Azul Seguros",
-  "Itau Seguro",
-  "Tokio Marine",
-  "Yelum Seguros",
-  "Allianz Seguros",
-  "Bradesco Seguros",
-  "Suhai Seguros",
-  "Zurich Seguros",
-  "Aliro Seguros",
-  "Mitsui Seguros",
-  "Hdi Seguros",
-  "Alfa Seguros",
-  "Mapfre Seguros",
-  "Demais Seguradoras"
+  "Porto Seguro", "Azul Seguros", "Itau Seguro", "Tokio Marine", "Yelum Seguros", "Allianz Seguros", 
+  "Bradesco Seguros", "Suhai Seguros", "Zurich Seguros", "Aliro Seguros", "Mitsui Seguros", 
+  "Hdi Seguros", "Alfa Seguros", "Mapfre Seguros", "Demais Seguradoras"
 ];
 
-// Helper robusto para datas
 const formatDisplayDate = (dateString?: string) => {
     if (!dateString) return '-';
-    // Se tiver barra, assume que já é BR e retorna
     if (dateString.includes('/')) return dateString;
-    // Se tiver traço e parecer ISO
     if (dateString.includes('-')) {
         try {
-            // Tenta criar data. Adiciona 'T00:00' para evitar problemas de timezone se for só YYYY-MM-DD
             const date = new Date(dateString.includes('T') ? dateString : `${dateString}T00:00:00`);
             return date.toLocaleDateString('pt-BR');
-        } catch (e) {
-            return dateString;
-        }
+        } catch (e) { return dateString; }
     }
     return dateString;
 };
 
-// Helper to check if a date string is today
 const isToday = (dateString?: string) => {
     if (!dateString) return false;
     if (dateString.includes('-')) {
@@ -61,31 +42,23 @@ const isToday = (dateString?: string) => {
     return false;
 };
 
-// Helper para exibir a data de criação corretamente
 const formatCreationDate = (dateString?: string) => {
     if (!dateString) return '-';
-    // Se já estiver no formato brasileiro (contém /), retorna direto
     if (dateString.includes('/')) return dateString;
-    // Caso contrário, tenta formatar de ISO para Locale
     try {
         return new Date(dateString).toLocaleDateString('pt-BR');
-    } catch (e) {
-        return dateString;
-    }
+    } catch (e) { return dateString; }
 };
 
-const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => void; onAdd: (l: Lead) => void }> = ({ lead, users, onUpdate, onAdd }) => {
-  // States for Edit Modes
+const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => void; onAdd: (l: Lead) => void; currentUser: User | null }> = ({ lead, users, onUpdate, onAdd, currentUser }) => {
   const [isEditingStatus, setIsEditingStatus] = useState(lead.status === LeadStatus.NEW);
   const [isEditingUser, setIsEditingUser] = useState(!lead.assignedTo);
 
-  // Form States
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | "">(lead.status === LeadStatus.NEW ? "" : lead.status); 
   const [selectedUser, setSelectedUser] = useState<string>(lead.assignedTo || '');
   const [observation, setObservation] = useState<string>(lead.notes || '');
   const [scheduleDate, setScheduleDate] = useState<string>(lead.scheduledDate || '');
 
-  // Deal Modal State
   const [showDealModal, setShowDealModal] = useState(false);
   const [dealForm, setDealForm] = useState<DealInfo & { leadName: string }>({
       leadName: lead.name,
@@ -98,10 +71,11 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
       endDate: ''
   });
 
-  // Calculate End Date whenever Start Date changes
+  const isAdmin = currentUser?.isAdmin;
+  const isLocked = (lead.status === LeadStatus.CLOSED || lead.status === LeadStatus.LOST) && !isAdmin;
+
   useEffect(() => {
       if (dealForm.startDate) {
-          // Normalize input date if necessary
           let dateStr = dealForm.startDate;
           if (dateStr.includes('/')) {
               const [d, m, y] = dateStr.split('/');
@@ -109,34 +83,23 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
           }
 
           const start = new Date(dateStr);
-          // Check validity to prevent RangeError
           if (!isNaN(start.getTime())) {
               const end = new Date(start);
               end.setFullYear(end.getFullYear() + 1);
               try {
                   setDealForm(prev => ({ ...prev, endDate: end.toISOString().split('T')[0] }));
-              } catch(e) {
-                  console.error("Error calculating end date", e);
-              }
+              } catch(e) {}
           }
       }
   }, [dealForm.startDate]);
 
-  // Determines which status to use for layout logic (Editing ? selected : saved)
   const effectiveStatus = isEditingStatus ? (selectedStatus as LeadStatus) : lead.status;
-
-  // Layout Logic
   const needsObservation = [LeadStatus.IN_CONTACT, LeadStatus.NO_CONTACT, LeadStatus.SCHEDULED].includes(effectiveStatus);
   const needsDate = effectiveStatus === LeadStatus.SCHEDULED;
   const hasDealInfo = lead.status === LeadStatus.CLOSED && !!lead.dealInfo;
-  
-  // Split view is active if we need inputs OR if we are displaying deal info
   const isSplitView = needsObservation || needsDate || hasDealInfo;
-
-  // Lógica de Agendamento Hoje
   const isScheduledToday = lead.status === LeadStatus.SCHEDULED && isToday(lead.scheduledDate);
 
-  // Update local state if lead prop changes from outside
   useEffect(() => {
     setObservation(lead.notes || '');
     setScheduleDate(lead.scheduledDate || '');
@@ -146,45 +109,36 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
 
   const isValidToSave = () => {
     if (!selectedStatus) return false; 
-    
     if (selectedStatus === LeadStatus.SCHEDULED) {
       return observation.trim().length > 0 && scheduleDate.length > 0;
     }
-    
     if (selectedStatus === LeadStatus.IN_CONTACT || selectedStatus === LeadStatus.NO_CONTACT) {
       return observation.trim().length > 0;
     }
-
     return true; 
   };
 
   const handleConfirmStatus = () => {
     if (!isValidToSave()) return;
-
-    // Se o status for FECHADO, abre o modal e interrompe o salvamento direto
     if (selectedStatus === LeadStatus.CLOSED) {
         setShowDealModal(true);
         return;
     }
-
     const newStatus = selectedStatus as LeadStatus;
-
     const updatedLead = {
       ...lead,
       status: newStatus,
       notes: observation,
       scheduledDate: needsDate ? scheduleDate : lead.scheduledDate
     };
-    
     onUpdate(updatedLead);
     setIsEditingStatus(false);
   };
 
   const handleSaveDeal = () => {
-      // 1. Atualizar o lead atual na coleção 'leads'
       const updatedLead: Lead = {
           ...lead,
-          name: dealForm.leadName, // Atualiza nome se mudou
+          name: dealForm.leadName,
           status: LeadStatus.CLOSED,
           dealInfo: {
               insurer: dealForm.insurer,
@@ -197,28 +151,22 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
           }
       };
       onUpdate(updatedLead);
-
-      // 2. Criar uma CÓPIA para a coleção 'renovacoes'
       const renewalCopy: Lead = {
           ...updatedLead,
-          id: `${lead.id}_renewal_copy_${Date.now()}`, // ID com marcador para App.tsx
+          id: `${lead.id}_renewal_copy_${Date.now()}`,
           createdAt: new Date().toISOString(),
           insuranceType: 'Renovação',
-          status: LeadStatus.NEW, // Reset status to NEW (Empty logic)
-          assignedTo: '',         // Reset responsible to Empty
+          status: LeadStatus.NEW,
+          assignedTo: '',
       };
       onAdd(renewalCopy);
-
       setShowDealModal(false);
       setIsEditingStatus(false);
   };
 
   const handleConfirmUser = () => {
       if (!selectedUser) return;
-      const updatedLead = {
-          ...lead,
-          assignedTo: selectedUser
-      };
+      const updatedLead = { ...lead, assignedTo: selectedUser };
       onUpdate(updatedLead);
       setIsEditingUser(false);
   };
@@ -234,17 +182,13 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
     }
   };
 
-  // Define dynamic card style based on status
   const cardStyle = lead.status === LeadStatus.CLOSED 
     ? 'bg-green-50 border-green-200' 
     : lead.status === LeadStatus.LOST 
       ? 'bg-red-50 border-red-200' 
       : 'bg-white border-gray-200';
   
-  // Dynamic border color for separators
-  const borderColor = lead.status === LeadStatus.CLOSED
-    ? 'border-green-200'
-    : 'border-gray-200';
+  const borderColor = lead.status === LeadStatus.CLOSED ? 'border-green-200' : 'border-gray-200';
 
   return (
     <>
@@ -252,13 +196,9 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
         ${cardStyle} rounded-xl shadow-sm border transition-all duration-300 w-full text-base relative
         ${isSplitView ? 'md:grid md:grid-cols-2' : 'flex flex-col'}
     `}>
-      
-      {/* LEFT COLUMN: Data + Controls + Footer */}
-      {/* EXTREMELY REDUCED PADDING AND GAP FOR COMPACT HEIGHT */}
       <div className={`p-2 flex flex-col justify-between gap-0.5 ${isSplitView ? `border-r ${borderColor}` : ''}`}>
         
         <div className="flex flex-col gap-0.5">
-            {/* Header Name & Badges */}
             <div className="flex justify-between items-start">
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-2">
@@ -277,7 +217,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                                 {lead.status}
                             </span>
                          )}
-
                         {lead.status === LeadStatus.SCHEDULED && lead.scheduledDate && !isEditingStatus && (
                             <span className="text-[10px] font-medium text-purple-700 flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
                                 <Calendar className="w-3 h-3" />
@@ -287,7 +226,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                     </div>
                 </div>
 
-                {/* Notification Bell Compact */}
                 {isScheduledToday && (
                     <div className="text-orange-600 bg-orange-50 p-1 rounded-md border border-orange-200 shadow-sm animate-pulse" title="Agendamento Hoje">
                         <Bell className="w-3 h-3" />
@@ -295,7 +233,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                 )}
             </div>
 
-            {/* Data Fields */}
             <div className="flex flex-col gap-0.5 text-gray-800 text-xs">
                 <div className="flex items-center gap-2">
                     <Car className="w-3 h-3 text-gray-400 shrink-0" />
@@ -318,25 +255,20 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                     <span className="font-medium text-indigo-700">{lead.insuranceType}</span>
                 </div>
 
-                {/* STATUS ALTERATION BLOCK */}
                 <div className="mt-1">
                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5 block">
                         Status do Lead
                     </label>
                     
                     {isEditingStatus ? (
-                        // EDIT MODE: Select + Confirm Button
                         <div className="flex gap-1">
-                            {/* WIDTH SET TO w-36 (Fixed ~144px) */}
                             <select 
                                 className="w-36 bg-white border border-gray-300 text-xs rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm font-medium text-gray-700"
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value as LeadStatus)}
                             >
                                 <option value="">-- Selecione --</option>
-                                {Object.values(LeadStatus)
-                                    .filter(s => s !== LeadStatus.NEW) 
-                                    .map(s => (
+                                {Object.values(LeadStatus).filter(s => s !== LeadStatus.NEW).map(s => (
                                     <option key={s} value={s}>{s}</option>
                                 ))}
                             </select>
@@ -354,75 +286,83 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                             </button>
                         </div>
                     ) : (
-                        // VIEW MODE: "Alterar" Button
                         <div className="flex items-center justify-between">
-                             <button 
-                                onClick={() => setIsEditingStatus(true)}
-                                className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-3 py-1 rounded text-[10px] font-bold transition-colors shadow-sm uppercase tracking-wide w-auto"
-                            >
-                                Alterar
-                            </button>
+                             {/* Esconde botão alterar se estiver bloqueado (fechado/perdido) e não for admin */}
+                             {!isLocked && (
+                                <button 
+                                    onClick={() => setIsEditingStatus(true)}
+                                    className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-3 py-1 rounded text-[10px] font-bold transition-colors shadow-sm uppercase tracking-wide w-auto"
+                                >
+                                    Alterar
+                                </button>
+                             )}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* RESPONSIBLE USER BLOCK */}
             <div className="grid grid-cols-1 gap-0.5 pt-1 border-t border-gray-100 mt-0.5">
                  <div className="flex flex-col gap-0.5">
                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
                         <Users className="w-3 h-3" /> Responsável
                     </label>
                     
-                    {isEditingUser ? (
-                        <div className="flex gap-1">
-                            {/* WIDTH SET TO w-36 (Fixed ~144px) */}
-                            <select 
-                                className="w-36 bg-white border border-gray-300 text-xs rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-gray-700 font-medium"
-                                value={selectedUser}
-                                onChange={(e) => setSelectedUser(e.target.value)}
-                            >
-                                <option value="">-- Selecione --</option>
-                                {users.filter(u => u.isActive).map(u => (
-                                    <option key={u.id} value={u.name}>{u.name}</option>
-                                ))}
-                            </select>
-                            <button 
-                                type="button"
-                                onClick={() => { 
-                                    const me = "Henrique Silva"; 
-                                    setSelectedUser(me);
-                                    if(selectedUser === me) {
-                                         const updated = { ...lead, assignedTo: me };
-                                         onUpdate(updated);
-                                         setIsEditingUser(false);
-                                    } else {
-                                         handleConfirmUser();
-                                    }
-                                }}
-                                className="bg-indigo-600 text-white border border-indigo-700 hover:bg-indigo-700 px-3 py-1 rounded text-xs font-bold transition-colors shadow-sm uppercase tracking-wide"
-                            >
-                                Atribuir
-                            </button>
-                        </div>
-                    ) : (
+                    {/* Se não for admin, só mostra o texto. Se for admin, mostra controles */}
+                    {!isAdmin ? (
                         <div className="flex items-center justify-between bg-gray-50 p-1.5 rounded border border-gray-200">
                              <span className="text-xs font-bold text-gray-700 truncate mr-2">
-                                Atribuído para: <span className="text-indigo-700">{lead.assignedTo}</span>
+                                Atribuído para: <span className="text-indigo-700">{lead.assignedTo || 'Ninguém'}</span>
                              </span>
-                             <button 
-                                onClick={() => setIsEditingUser(true)}
-                                className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-2 py-0.5 rounded text-[10px] font-bold transition-colors shadow-sm uppercase tracking-wide"
-                            >
-                                Alterar
-                            </button>
                         </div>
+                    ) : (
+                        isEditingUser ? (
+                            <div className="flex gap-1">
+                                <select 
+                                    className="w-36 bg-white border border-gray-300 text-xs rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-gray-700 font-medium"
+                                    value={selectedUser}
+                                    onChange={(e) => setSelectedUser(e.target.value)}
+                                >
+                                    <option value="">-- Selecione --</option>
+                                    {users.filter(u => u.isActive).map(u => (
+                                        <option key={u.id} value={u.name}>{u.name}</option>
+                                    ))}
+                                </select>
+                                <button 
+                                    type="button"
+                                    onClick={() => { 
+                                        const me = "Henrique Silva"; 
+                                        setSelectedUser(me);
+                                        if(selectedUser === me) {
+                                            const updated = { ...lead, assignedTo: me };
+                                            onUpdate(updated);
+                                            setIsEditingUser(false);
+                                        } else {
+                                            handleConfirmUser();
+                                        }
+                                    }}
+                                    className="bg-indigo-600 text-white border border-indigo-700 hover:bg-indigo-700 px-3 py-1 rounded text-xs font-bold transition-colors shadow-sm uppercase tracking-wide"
+                                >
+                                    Atribuir
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between bg-gray-50 p-1.5 rounded border border-gray-200">
+                                <span className="text-xs font-bold text-gray-700 truncate mr-2">
+                                    Atribuído para: <span className="text-indigo-700">{lead.assignedTo}</span>
+                                </span>
+                                <button 
+                                    onClick={() => setIsEditingUser(true)}
+                                    className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-2 py-0.5 rounded text-[10px] font-bold transition-colors shadow-sm uppercase tracking-wide"
+                                >
+                                    Alterar
+                                </button>
+                            </div>
+                        )
                     )}
                 </div>
             </div>
         </div>
 
-        {/* Footer Actions */}
         <div className="mt-1 pt-1 flex items-center justify-end border-t border-gray-200">
             <div className="text-[10px] text-gray-400 font-medium">
                 Criado em: {formatCreationDate(lead.createdAt)}
@@ -430,7 +370,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Conditional Inputs OR Deal Info */}
       {isSplitView && (
         <div className={`
             p-2 flex flex-col gap-2 animate-fade-in border-l
@@ -438,7 +377,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
         `}>
             
             {hasDealInfo ? (
-                // DEAL INFO VIEW (Read Only)
                 <div className="flex flex-col gap-1 h-full">
                      <h4 className="text-xs font-bold text-green-700 uppercase tracking-wide border-b border-green-200 pb-1 flex items-center gap-1">
                         <Shield className="w-3 h-3"/> Venda Confirmada
@@ -451,7 +389,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                             </div>
                              <div>
                                 <span className="block text-gray-400 text-[10px] uppercase">Pagamento</span>
-                                {/* Aqui buscamos o Parcelamento (installments) conforme solicitado */}
                                 <span className="font-semibold">{lead.dealInfo?.installments}</span>
                             </div>
                         </div>
@@ -478,7 +415,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                      </div>
                 </div>
             ) : (
-                // INPUTS VIEW (Editing)
                 <>
                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide border-b border-gray-200 pb-1">
                         Complemento
@@ -529,7 +465,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
       )}
     </div>
 
-    {/* MODAL DE FECHAMENTO (POP-UP) */}
     {showDealModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
@@ -542,8 +477,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                 </div>
                 
                 <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-                    
-                    {/* Nome do Lead */}
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nome do Cliente</label>
                         <input 
@@ -553,8 +486,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none"
                         />
                     </div>
-
-                    {/* Seguradora e Meio Pagamento */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Seguradora</label>
@@ -584,8 +515,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                              </select>
                         </div>
                     </div>
-
-                    {/* Valores */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Prêmio Líquido (R$)</label>
@@ -608,8 +537,6 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                             />
                         </div>
                     </div>
-
-                    {/* Parcelamento */}
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Parcelamento</label>
                         <select
@@ -618,14 +545,11 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-white"
                         >
                             <option value="">Selecione</option>
-                            {/* Removido À Vista, deixando apenas 1 a 12 */}
                             {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
                                 <option key={num} value={`${num}x`}>{num}x</option>
                             ))}
                         </select>
                     </div>
-
-                    {/* Vigência */}
                     <div className="grid grid-cols-2 gap-4 p-3 bg-gray-50 rounded border border-gray-200">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Início Vigência</label>
@@ -646,22 +570,11 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                             />
                         </div>
                     </div>
-
                 </div>
 
                 <div className="p-6 pt-0 flex gap-3">
-                    <button 
-                        onClick={() => setShowDealModal(false)}
-                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-bold text-sm"
-                    >
-                        Cancelar
-                    </button>
-                    <button 
-                        onClick={handleSaveDeal}
-                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold text-sm shadow-md"
-                    >
-                        Confirmar Venda
-                    </button>
+                    <button onClick={() => setShowDealModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-bold text-sm">Cancelar</button>
+                    <button onClick={handleSaveDeal} className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold text-sm shadow-md">Confirmar Venda</button>
                 </div>
             </div>
         </div>
@@ -670,73 +583,44 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
   );
 };
 
-export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, onUpdateLead, onAddLead }) => {
+export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, onUpdateLead, onAddLead, currentUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterDate, setFilterDate] = useState<string>(''); // YYYY-MM
-  
-  // New Lead Modal State
+  const [filterDate, setFilterDate] = useState<string>(''); 
   const [showNewLeadModal, setShowNewLeadModal] = useState(false);
   const [newLeadForm, setNewLeadForm] = useState({
-      name: '',
-      vehicleModel: '',
-      vehicleYear: '',
-      city: '',
-      phone: '',
-      insuranceType: 'Novo',
-      assignedTo: ''
+      name: '', vehicleModel: '', vehicleYear: '', city: '', phone: '', insuranceType: 'Novo', assignedTo: ''
   });
   
-  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Reset pagination when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterStatus, filterDate]);
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, filterStatus, filterDate]);
 
   const filteredLeads = leads.filter(lead => {
     const term = searchTerm.toLowerCase();
-    // Proteção: usa string vazia se nome ou telefone forem undefined
     const name = lead.name || '';
     const phone = lead.phone || '';
-    
-    const matchesSearch = name.toLowerCase().includes(term) || 
-                          phone.includes(term); 
+    const matchesSearch = name.toLowerCase().includes(term) || phone.includes(term); 
     const matchesStatus = filterStatus === 'all' || lead.status === filterStatus;
-    // Check if created date matches YYYY-MM
-    // Se a data estiver no formato ISO YYYY-MM-DD
     let matchesDate = true;
     if (filterDate && lead.createdAt) {
         if(lead.createdAt.includes('-') && !lead.createdAt.includes('/')) {
             matchesDate = lead.createdAt.startsWith(filterDate);
-        } else {
-            // Se estiver em formato brasileiro DD/MM/YYYY, conversão é complexa, vamos ignorar filtro de data ou implementar parse manual
-            // Para simplicidade, assumindo ISO para filtro ou ignorando se formato customizado
-            matchesDate = true; 
-        }
+        } else { matchesDate = true; }
     }
-
     return matchesSearch && matchesStatus && matchesDate;
   }).sort((a, b) => {
-    // SORTING LOGIC: Newest createdAt first
     const dateA = new Date(a.createdAt).getTime();
     const dateB = new Date(b.createdAt).getTime();
     return dateB - dateA;
   });
 
-  // Calculate Pagination
   const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
   const paginatedLeads = filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(p => p + 1);
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) setCurrentPage(p => p - 1);
-  };
+  const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(p => p + 1); };
+  const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(p => p - 1); };
 
   const handleCreateLead = () => {
       const newLead: Lead = {
@@ -750,30 +634,17 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, 
           assignedTo: newLeadForm.assignedTo,
           status: LeadStatus.NEW,
           createdAt: new Date().toISOString(),
-          email: '', // Not required by form prompt
-          notes: ''
+          email: '', notes: ''
       };
       onAddLead(newLead);
       setShowNewLeadModal(false);
-      // Reset form
-      setNewLeadForm({
-        name: '',
-        vehicleModel: '',
-        vehicleYear: '',
-        city: '',
-        phone: '',
-        insuranceType: 'Novo',
-        assignedTo: ''
-      });
+      setNewLeadForm({ name: '', vehicleModel: '', vehicleYear: '', city: '', phone: '', insuranceType: 'Novo', assignedTo: '' });
   };
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header Controls */}
       <div className="mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-        <div>
-            <h2 className="text-xl font-bold text-gray-800">Meus Leads</h2>
-        </div>
+        <div><h2 className="text-xl font-bold text-gray-800">Meus Leads</h2></div>
         
         <div className="flex flex-col md:flex-row gap-2 flex-wrap">
           <div className="relative flex-grow md:flex-grow-0 min-w-[200px]">
@@ -815,7 +686,6 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, 
         </div>
       </div>
 
-      {/* List Layout - Stacked Cards */}
       <div className="flex flex-col gap-4 pb-4 overflow-y-auto w-full px-1 flex-1">
         {paginatedLeads.map((lead) => (
             <LeadCard 
@@ -824,6 +694,7 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, 
                 users={users} 
                 onUpdate={onUpdateLead}
                 onAdd={onAddLead}
+                currentUser={currentUser}
             />
         ))}
 
@@ -835,7 +706,6 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, 
         )}
       </div>
 
-      {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-4 py-4 bg-white border-t border-gray-200 mt-auto">
             <button 
@@ -845,9 +715,7 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, 
             >
                 Anterior
             </button>
-            <span className="text-sm text-gray-600 font-medium">
-                Página {currentPage} de {totalPages}
-            </span>
+            <span className="text-sm text-gray-600 font-medium">Página {currentPage} de {totalPages}</span>
             <button 
                 onClick={handleNextPage} 
                 disabled={currentPage === totalPages}
@@ -858,84 +726,42 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, 
         </div>
       )}
 
-      {/* NEW LEAD MODAL */}
       {showNewLeadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
                 <div className="bg-indigo-600 px-6 py-4 flex justify-between items-center">
-                    <h2 className="text-white font-bold text-lg flex items-center gap-2">
-                        <Plus className="w-5 h-5" />
-                        Novo Lead
-                    </h2>
+                    <h2 className="text-white font-bold text-lg flex items-center gap-2"><Plus className="w-5 h-5" />Novo Lead</h2>
                     <button onClick={() => setShowNewLeadModal(false)} className="text-white/80 hover:text-white transition-colors">✕</button>
                 </div>
-                
                 <div className="p-6 space-y-4 overflow-y-auto">
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nome Completo</label>
-                        <input 
-                            type="text"
-                            value={newLeadForm.name}
-                            onChange={(e) => setNewLeadForm({...newLeadForm, name: e.target.value})}
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                            placeholder="Ex: João da Silva"
-                        />
+                        <input type="text" value={newLeadForm.name} onChange={(e) => setNewLeadForm({...newLeadForm, name: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                     </div>
-
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Modelo do Veículo</label>
-                            <input 
-                                type="text"
-                                value={newLeadForm.vehicleModel}
-                                onChange={(e) => setNewLeadForm({...newLeadForm, vehicleModel: e.target.value})}
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                placeholder="Ex: Corolla XEi"
-                            />
+                            <input type="text" value={newLeadForm.vehicleModel} onChange={(e) => setNewLeadForm({...newLeadForm, vehicleModel: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Ano/Modelo</label>
-                            <input 
-                                type="text"
-                                value={newLeadForm.vehicleYear}
-                                onChange={(e) => setNewLeadForm({...newLeadForm, vehicleYear: e.target.value})}
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                placeholder="Ex: 2023/2024"
-                            />
+                            <input type="text" value={newLeadForm.vehicleYear} onChange={(e) => setNewLeadForm({...newLeadForm, vehicleYear: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                         </div>
                     </div>
-
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Cidade</label>
-                            <input 
-                                type="text"
-                                value={newLeadForm.city}
-                                onChange={(e) => setNewLeadForm({...newLeadForm, city: e.target.value})}
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                placeholder="Ex: São Paulo - SP"
-                            />
+                            <input type="text" value={newLeadForm.city} onChange={(e) => setNewLeadForm({...newLeadForm, city: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                         </div>
                          <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Telefone</label>
-                            <input 
-                                type="text"
-                                value={newLeadForm.phone}
-                                onChange={(e) => setNewLeadForm({...newLeadForm, phone: e.target.value})}
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                                placeholder="(00) 00000-0000"
-                            />
+                            <input type="text" value={newLeadForm.phone} onChange={(e) => setNewLeadForm({...newLeadForm, phone: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                         </div>
                     </div>
-
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Tipo de Seguro</label>
-                             <select 
-                                value={newLeadForm.insuranceType}
-                                onChange={(e) => setNewLeadForm({...newLeadForm, insuranceType: e.target.value})}
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                             >
+                             <select value={newLeadForm.insuranceType} onChange={(e) => setNewLeadForm({...newLeadForm, insuranceType: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
                                 <option value="Novo">Novo</option>
                                 <option value="Renovação">Renovação</option>
                                 <option value="Indicação">Indicação</option>
@@ -943,11 +769,7 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, 
                         </div>
                          <div>
                              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Responsável</label>
-                             <select 
-                                value={newLeadForm.assignedTo}
-                                onChange={(e) => setNewLeadForm({...newLeadForm, assignedTo: e.target.value})}
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                             >
+                             <select value={newLeadForm.assignedTo} onChange={(e) => setNewLeadForm({...newLeadForm, assignedTo: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
                                 <option value="">-- Selecione --</option>
                                 {users.filter(u => u.isActive).map(u => (
                                     <option key={u.id} value={u.name}>{u.name}</option>
@@ -956,21 +778,9 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, 
                         </div>
                     </div>
                 </div>
-
                 <div className="p-6 pt-0 flex gap-3 mt-auto bg-gray-50 border-t border-gray-100 py-4">
-                    <button 
-                        onClick={() => setShowNewLeadModal(false)}
-                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-white hover:shadow-sm font-bold text-sm transition-all"
-                    >
-                        Cancelar
-                    </button>
-                    <button 
-                        onClick={handleCreateLead}
-                        disabled={!newLeadForm.name}
-                        className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-bold text-sm shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Criar Lead
-                    </button>
+                    <button onClick={() => setShowNewLeadModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-white hover:shadow-sm font-bold text-sm transition-all">Cancelar</button>
+                    <button onClick={handleCreateLead} disabled={!newLeadForm.name} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-bold text-sm shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed">Criar Lead</button>
                 </div>
             </div>
         </div>
