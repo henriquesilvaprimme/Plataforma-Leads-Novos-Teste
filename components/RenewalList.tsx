@@ -253,14 +253,15 @@ const RenewalCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void, onAdd: (l
         `}>
             
             {/* LEFT COLUMN: All Data + Controls */}
-            <div className={`p-6 flex flex-col justify-between ${isSplitView ? `border-r ${borderColor}` : ''}`}>
-                <div className="flex flex-col gap-5">
+            {/* REDUCED PADDING AND GAP */}
+            <div className={`p-3 flex flex-col justify-between gap-1 ${isSplitView ? `border-r ${borderColor}` : ''}`}>
+                <div className="flex flex-col gap-1">
                     
                     {/* Header */}
                     <div className="flex justify-between items-start">
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-xl text-gray-900 leading-tight">{lead.name}</h3>
+                                <h3 className="font-bold text-lg text-gray-900 leading-tight">{lead.name}</h3>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 min-h-[20px]">
                                 {/* Using lead.status instead of selectedStatus to ensure badge reflects saved state, hiding if NEW */}
@@ -285,7 +286,7 @@ const RenewalCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void, onAdd: (l
                     </div>
 
                     {/* Data Fields Stacked */}
-                    <div className="flex flex-col gap-2 text-gray-800">
+                    <div className="flex flex-col gap-1 text-gray-800 text-sm">
                         {/* Vehicle */}
                         <div className="flex items-center gap-2">
                             <Car className="w-4 h-4 text-gray-400 shrink-0" />
@@ -329,15 +330,16 @@ const RenewalCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void, onAdd: (l
                         </div>
 
                         {/* STATUS CONTROL */}
-                        <div className="mt-3">
-                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">
+                        <div className="mt-2">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5 block">
                                 Status do Lead
                             </label>
                             
                             {isEditingStatus ? (
                                 <div className="flex gap-1">
+                                    {/* WIDTH SET TO 40% */}
                                     <select 
-                                        className="flex-1 bg-white border border-gray-300 text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm font-medium text-gray-700"
+                                        className="w-[40%] bg-white border border-gray-300 text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm font-medium text-gray-700"
                                         value={selectedStatus}
                                         onChange={(e) => setSelectedStatus(e.target.value as LeadStatus)}
                                     >
@@ -373,16 +375,17 @@ const RenewalCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void, onAdd: (l
                     </div>
 
                     {/* RESPONSIBLE CONTROL */}
-                    <div className="grid grid-cols-1 gap-2 pt-3 border-t border-gray-100 mt-1">
-                        <div className="flex flex-col gap-1">
+                    <div className="grid grid-cols-1 gap-1 pt-2 border-t border-gray-100 mt-1">
+                        <div className="flex flex-col gap-0.5">
                             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
                                 <Users className="w-3 h-3" /> Responsável
                             </label>
                             
                             {isEditingUser || !selectedUser ? (
                                 <div className="flex gap-1">
+                                    {/* WIDTH SET TO 40% */}
                                     <select 
-                                        className="flex-1 bg-white border border-gray-300 text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-gray-700 font-medium"
+                                        className="w-[40%] bg-white border border-gray-300 text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-gray-700 font-medium"
                                         value={selectedUser}
                                         onChange={(e) => setSelectedUser(e.target.value)}
                                     >
@@ -417,7 +420,7 @@ const RenewalCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void, onAdd: (l
                 </div>
 
                 {/* Footer: Created At */}
-                <div className="mt-4 pt-3 flex items-center justify-end border-t border-gray-200">
+                <div className="mt-2 pt-2 flex items-center justify-end border-t border-gray-200">
                     <div className="text-[10px] text-gray-400 font-medium">
                         Criado em: {formatCreationDate(lead.createdAt)}
                     </div>
@@ -427,7 +430,7 @@ const RenewalCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void, onAdd: (l
             {/* RIGHT COLUMN: Conditional Inputs */}
             {isSplitView && (
                 <div className={`
-                    p-6 flex flex-col gap-5 animate-fade-in border-l
+                    p-3 flex flex-col gap-3 animate-fade-in border-l
                     ${lead.status === LeadStatus.CLOSED ? borderColor : `bg-gray-50 ${borderColor}`}
                 `}>
                     <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wide border-b border-gray-200 pb-2">
