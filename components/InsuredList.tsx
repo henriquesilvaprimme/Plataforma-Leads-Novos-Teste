@@ -77,22 +77,22 @@ const VehicleCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ le
   };
 
   return (
-    <div className={`border rounded-lg p-3 shadow-sm relative transition-colors ${isCancelled ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
-       {/* Card Content */}
-       <div className="flex flex-col gap-3">
+    <div className={`border rounded-xl p-2 shadow-sm relative transition-colors ${isCancelled ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'}`}>
+       {/* Card Content Compact */}
+       <div className="flex flex-col gap-0.5">
           
           <div className="flex justify-between items-start">
-             <div className="flex flex-col">
+             <div className="flex flex-col gap-0.5">
                 <div className="flex items-center gap-2">
-                   <Car className="w-4 h-4 text-gray-400" />
-                   <span className="font-bold text-gray-800">{lead.vehicleModel}</span>
-                   <span className="text-xs text-gray-500">({lead.vehicleYear})</span>
+                   <Car className="w-3 h-3 text-gray-400" />
+                   <span className="font-bold text-gray-800 text-sm">{lead.vehicleModel}</span>
+                   <span className="text-[10px] text-gray-500">({lead.vehicleYear})</span>
                 </div>
                 
                 {isCancelled && (
-                    <div className="mt-1">
-                        <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded uppercase border border-red-200">
-                            Veículo Cancelado
+                    <div className="mt-0.5">
+                        <span className="bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase border border-red-200">
+                            Cancelado
                         </span>
                     </div>
                 )}
@@ -100,15 +100,15 @@ const VehicleCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ le
              
              {/* Endorsement Alert Badges */}
              {lead.endorsements && lead.endorsements.length > 0 && (
-                <div className="flex flex-col gap-1 items-end">
+                <div className="flex flex-col gap-0.5 items-end">
                    {lead.endorsements.map(endorsement => (
                       <button 
                         key={endorsement.id}
                         onClick={() => setShowEndorseInfo(endorsement.id === showEndorseInfo ? null : endorsement.id)}
-                        className="flex items-center gap-1 text-[10px] bg-yellow-50 text-yellow-700 px-2 py-0.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors"
+                        className="flex items-center gap-1 text-[10px] bg-yellow-50 text-yellow-700 px-1.5 py-0.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors"
                       >
                          <AlertTriangle className="w-3 h-3" />
-                         Endosso Realizado
+                         Endosso
                       </button>
                    ))}
                 </div>
@@ -117,11 +117,11 @@ const VehicleCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ le
 
           {/* Endorsement Info Popover (In-Card) */}
           {showEndorseInfo && (
-            <div className="bg-yellow-50 p-2 rounded border border-yellow-200 text-xs text-gray-700 animate-fade-in mb-2">
+            <div className="bg-yellow-50 p-2 rounded border border-yellow-200 text-xs text-gray-700 animate-fade-in mb-1">
                 {lead.endorsements?.filter(e => e.id === showEndorseInfo).map(e => (
-                   <div key={e.id} className="space-y-1">
-                      <p className="font-bold text-yellow-800 border-b border-yellow-200 pb-1 mb-1">Detalhes do Endosso</p>
-                      <p>Veículo: <b>{e.vehicleModel} ({e.vehicleYear})</b></p>
+                   <div key={e.id} className="space-y-0.5">
+                      <p className="font-bold text-yellow-800 border-b border-yellow-200 pb-0.5 mb-0.5">Endosso</p>
+                      <p>Veículo: <b>{e.vehicleModel}</b></p>
                       <p>Prêmio: <b>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(e.netPremium)}</b></p>
                       <p>Vigência: <b>{formatDisplayDate(e.startDate)}</b></p>
                    </div>
@@ -129,22 +129,22 @@ const VehicleCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ le
             </div>
           )}
 
-          {/* Dates & Financial Info */}
-          <div className="flex flex-col gap-2">
-             {/* Datas de Vigência Solicitadas */}
-             <div className="flex items-center gap-4 text-xs">
-                <div className="flex items-center gap-1 text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100">
-                    <span className="font-bold">Vigência Inicial:</span>
+          {/* Dates & Financial Info Compact */}
+          <div className="flex flex-col gap-0.5">
+             {/* Datas de Vigência */}
+             <div className="flex items-center gap-2 text-[10px]">
+                <div className="flex items-center gap-1 text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                    <span className="font-bold">Início:</span>
                     <span>{formatDisplayDate(lead.dealInfo?.startDate)}</span>
                 </div>
-                <div className="flex items-center gap-1 text-indigo-700 bg-indigo-50 px-2 py-1 rounded border border-indigo-100">
-                    <span className="font-bold">Vigência Final:</span>
+                <div className="flex items-center gap-1 text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                    <span className="font-bold">Fim:</span>
                     <span>{formatDisplayDate(lead.dealInfo?.endDate)}</span>
                 </div>
              </div>
 
-             {/* Financial Info Grid */}
-             <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 bg-gray-50 p-2 rounded border border-gray-100">
+             {/* Financial Info Grid Compact */}
+             <div className="grid grid-cols-3 gap-1 text-[10px] text-gray-600 bg-gray-50 p-1.5 rounded border border-gray-100">
                 <div>Prêmio: <b className="text-gray-900">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lead.dealInfo?.netPremium || 0)}</b></div>
                 <div>Comissão: <b className="text-green-600">{lead.dealInfo?.commission}%</b></div>
                 <div>Parc.: <b>{lead.dealInfo?.installments}</b></div>
@@ -152,22 +152,22 @@ const VehicleCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ le
           </div>
 
           {/* Footer: Closed By + Actions */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-1">
+          <div className="flex items-center justify-between pt-1 border-t border-gray-100 mt-0.5">
              <span className="text-[10px] text-gray-500">
-                Fechado por: <b className="text-indigo-600">{lead.assignedTo || 'Sistema'}</b>
+                Resp: <b className="text-indigo-600">{lead.assignedTo || 'Sistema'}</b>
              </span>
              
              {!isCancelled && (
-                 <div className="flex gap-2">
+                 <div className="flex gap-1">
                     <button 
                     onClick={() => setShowEndorseModal(true)}
-                    className="flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded hover:bg-blue-100 border border-blue-200 transition-colors"
+                    className="flex items-center gap-1 text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded hover:bg-blue-100 border border-blue-200 transition-colors"
                     >
                     <Edit className="w-3 h-3" /> Endossar
                     </button>
                     <button 
                     onClick={handleCancelLead}
-                    className="flex items-center gap-1 text-xs bg-red-50 text-red-700 px-2 py-1 rounded hover:bg-red-100 border border-red-200 transition-colors"
+                    className="flex items-center gap-1 text-[10px] bg-red-50 text-red-700 px-1.5 py-0.5 rounded hover:bg-red-100 border border-red-200 transition-colors"
                     >
                     <XCircle className="w-3 h-3" /> Cancelar
                     </button>
@@ -212,9 +212,9 @@ const VehicleCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ le
                      <label className="block text-[10px] font-bold text-gray-700 uppercase mb-1">Parcelamento</label>
                      <select value={endorseForm.installments} onChange={e => setEndorseForm({...endorseForm, installments: e.target.value})} className="w-full border rounded px-2 py-1 text-xs outline-none focus:border-blue-500 bg-white">
                         <option value="">Selecione</option>
-                        <option value="À Vista">À Vista</option>
-                        <option value="Débito">Débito</option>
-                        <option value="Cartão">Cartão</option>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
+                             <option key={num} value={`${num}x`}>{num}x</option>
+                        ))}
                      </select>
                   </div>
                   <div>
@@ -238,8 +238,7 @@ export const InsuredList: React.FC<InsuredListProps> = ({ leads, onUpdateLead })
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
 
-  // 1. ATENÇÃO: Usando todos os leads passados na prop (que vêm da coleção renovacoes)
-  // Removido filtro de status para garantir que todos apareçam
+  // 1. Usando todos os leads passados na prop (coleção renovacoes)
   const insuredLeads = leads; 
 
   // 2. Filter by Search and Date
@@ -256,7 +255,6 @@ export const InsuredList: React.FC<InsuredListProps> = ({ leads, onUpdateLead })
   const groupedLeads: { [key: string]: { clientName: string, phone: string, leads: Lead[] } } = {};
   
   filtered.forEach(lead => {
-     // Agrupamento por telefone. Se não tiver telefone, usa ID para não perder o lead.
      const key = lead.phone || `no-phone-${lead.id}`;
      
      if (!groupedLeads[key]) {
@@ -308,8 +306,8 @@ export const InsuredList: React.FC<InsuredListProps> = ({ leads, onUpdateLead })
                       </span>
                    </div>
 
-                   {/* Vehicles Grid */}
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                   {/* Vehicles Grid - Compacted */}
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {group.leads.map(lead => (
                          <VehicleCard key={lead.id} lead={lead} onUpdate={onUpdateLead} />
                       ))}
