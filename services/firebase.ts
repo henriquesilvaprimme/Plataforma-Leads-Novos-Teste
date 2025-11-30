@@ -16,6 +16,7 @@ const firebaseConfig = {
 };
 
 // Exportação explícita da constante de verificação
+// Se a chave for a default do código, considera não configurado.
 export const isFirebaseConfigured = firebaseConfig.apiKey !== "SUA_API_KEY_AQUI";
 
 let app: any;
@@ -40,19 +41,62 @@ if (isFirebaseConfigured) {
 const parseCurrency = (val: any): number => {
     if (typeof val === 'number') return val;
     if (!val) return 0;
-    // Remove "R$", espaços e pontos de milhar. Substitui vírgula decimal por ponto.
-    const cleanStr = val.toString().replace(/[R$\s.]/g, '').replace(',', '.');
-    const number = parseFloat(cleanStr);
-    return isNaN(number) ? 0 : number;
+    try {
+        // Converte para string
+        let cleanStr = val.toString();
+        
+        // Se for formato brasileiro (tem vírgula como decimal ou pontos como milhar)
+        if (cleanStr.includes(',') || (cleanStr.includes('.') && cleanStr.split('.').length > 2)) {
+            // Remove R$, espaços e pontos de milhar
+            cleanStr = cleanStr.replace(/[R$\s]/g, '').replace(/\./g, '');
+            // Substitui vírgula por ponto
+            cleanStr = cleanStr.replace(',', '.');
+        } else {
+            // Remove apenas caracteres não numéricos exceto ponto
+            cleanStr = cleanStr.replace(/[^\d.]/g, '');
+        }
+
+        const number = parseFloat(cleanStr);
+        return isNaN(number) ? 0 : number;
+    } catch (e) {
+        return 0;
+    }
 };
 
 const parsePercentage = (val: any): number => {
     if (typeof val === 'number') return val;
     if (!val) return 0;
-    // Remove "%" e espaços. Substitui vírgula por ponto.
-    const cleanStr = val.toString().replace(/[%\s]/g, '').replace(',', '.');
-    const number = parseFloat(cleanStr);
-    return isNaN(number) ? 0 : number;
+    try {
+        let cleanStr = val.toString().replace(/[%\s]/g, '');
+        if (cleanStr.includes(',')) {
+            cleanStr = cleanStr.replace(/\./g, '').replace(',', '.');
+        }
+        const number = parseFloat(cleanStr);
+        return isNaN(number) ? 0 : number;
+    } catch (e) {
+        return 0;
+    }
+};
+
+const parseDateToISO = (val: any): string => {
+    if (!val) return '';
+    const str = val.toString().trim();
+    
+    // Detecta formato DD/MM/YYYY
+    const brDateMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (brDateMatch) {
+        const day = brDateMatch[1].padStart(2, '0');
+        const month = brDateMatch[2].padStart(2, '0');
+        const year = brDateMatch[3];
+        return `${year}-${month}-${day}`;
+    }
+
+    // Se já for ISO YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+        return str.substring(0, 10);
+    }
+    
+    return str;
 };
 
 // === FUNÇÕES AUXILIARES DE MAPEAMENTO (BANCO -> APP) ===
@@ -71,34 +115,33 @@ export const mapDocumentToLead = (doc: any): Lead => {
         phone: data.Telefone || '',
         insuranceType: data.TipoSeguro || '',
         status: data.status || 'Novo',
-        email: data.Email || data.email || '', // Mapeando email
+        email: data.Email || data.email || '', 
         assignedTo: data.Responsavel || '',
         createdAt: data.createdAt || new Date().toISOString(),
-        notes: data.notes || data.Observacoes || '', // Mantendo compatibilidade
+        notes: data.notes || data.Observacoes || '',
         
         // Agendamento
         scheduledDate: data.agendamento || '',
 
-        // Campos Extras mencionados
+        // Campos Extras
         cartaoPortoNovo: data.CartaoPortoNovo,
         insurerConfirmed: data.insurerConfirmed,
         closedAt: data.closedAt,
         usuarioId: data.usuarioId,
-        registeredAt: data.registeredAt, // Para renovações
+        registeredAt: data.registeredAt,
 
-        // Dados do Fechamento (Achatados no banco -> Objeto no App)
-        // Usamos os parsers aqui para garantir que strings formatadas virem números
+        // Dados do Fechamento
+        // Usamos parseDateToISO para garantir YYYY-MM-DD para os inputs type="date"
         dealInfo: (data.Seguradora || data.PremioLiquido || data.VigenciaInicial) ? {
             insurer: data.Seguradora || '',
             netPremium: parseCurrency(data.PremioLiquido),
             commission: parsePercentage(data.Comissao),
             installments: data.Parcelamento || '',
-            startDate: data.VigenciaInicial || '',
-            endDate: data.VigenciaFinal || '',
+            startDate: parseDateToISO(data.VigenciaInicial),
+            endDate: parseDateToISO(data.VigenciaFinal),
             paymentMethod: '' 
         } : undefined,
 
-        // Manter endossos se existirem (estrutura complexa)
         endorsements: data.endorsements || []
     } as unknown as Lead;
 };
@@ -106,15 +149,14 @@ export const mapDocumentToLead = (doc: any): Lead => {
 export const mapDocumentToUser = (doc: any): User => {
     const data = doc.data();
     return {
-        id: doc.id, // ID vem do ID do documento ou campo 'id'
+        id: doc.id,
         name: data.nome || '',
         login: data.usuario || '',
         password: data.senha || '',
         email: data.email || '',
-        // Conversão de Status e Tipo (String PT -> Boolean)
         isActive: data.status === 'Ativo', 
         isAdmin: data.tipo === 'Admin',
-        avatarColor: 'bg-indigo-600' // Padrão visual
+        avatarColor: 'bg-indigo-600'
     } as User;
 };
 
@@ -142,22 +184,20 @@ const mapAppToDb = (collectionName: string, data: any) => {
         AnoModelo: data.vehicleYear,
         Cidade: data.city,
         Telefone: data.phone,
-        Email: data.email, // Salvando email
+        Email: data.email, 
         TipoSeguro: data.insuranceType,
         createdAt: data.createdAt,
         Responsavel: data.assignedTo,
         status: data.status,
         agendamento: data.scheduledDate,
-        notes: data.notes, // Salvando notas também
+        notes: data.notes, 
         
-        // Campos Extras
         usuarioId: data.usuarioId || '',
         closedAt: data.closedAt || '',
         insurerConfirmed: data.insurerConfirmed || false,
         CartaoPortoNovo: data.cartaoPortoNovo || false
     };
 
-    // Dados de Venda (Achatando o objeto dealInfo para colunas soltas)
     if (data.dealInfo) {
         dbLead.Seguradora = data.dealInfo.insurer;
         dbLead.PremioLiquido = data.dealInfo.netPremium;
@@ -167,16 +207,11 @@ const mapAppToDb = (collectionName: string, data: any) => {
         dbLead.VigenciaFinal = data.dealInfo.endDate;
     }
 
-    // Se for renovação, adiciona registeredAt
-    if (collectionName === 'renovacoes' && data.registeredAt) {
-        dbLead.registeredAt = data.registeredAt;
-    }
-    // Se não tiver registeredAt mas for salvar em renovacoes, cria data atual
-    if (collectionName === 'renovacoes' && !dbLead.registeredAt) {
-        dbLead.registeredAt = new Date().toISOString();
+    if (collectionName === 'renovacoes') {
+        if (data.registeredAt) dbLead.registeredAt = data.registeredAt;
+        else dbLead.registeredAt = new Date().toISOString();
     }
 
-    // Endossos (mantendo estrutura de array se houver)
     if (data.endorsements) {
         dbLead.endorsements = data.endorsements;
     }
@@ -245,9 +280,7 @@ export const addDataToCollection = async (collectionName: string, data: any) => 
     }
     
     try {
-        // Converte os dados do App para o formato do Banco (Português)
         const dbData = mapAppToDb(collectionName, data);
-        
         await addDoc(collection(db, collectionName), dbData);
     } catch (error) {
         console.error(`Erro ao salvar em ${collectionName}:`, error);
@@ -259,9 +292,7 @@ export const updateDataInCollection = async (collectionName: string, id: string,
     if (!isFirebaseConfigured || !db) return;
 
     try {
-        // Converte os dados do App para o formato do Banco (Português)
         const dbData = mapAppToDb(collectionName, data);
-
         const docRef = doc(db, collectionName, id);
         await updateDoc(docRef, dbData);
     } catch (error) {
