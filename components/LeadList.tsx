@@ -73,7 +73,7 @@ const formatCreationDate = (dateString?: string) => {
     }
 };
 
-const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead, onUpdate }) => {
+const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void; onAdd: (l: Lead) => void }> = ({ lead, onUpdate, onAdd }) => {
   // States for Edit Modes
   const [isEditingStatus, setIsEditingStatus] = useState(lead.status === LeadStatus.NEW);
   const [isEditingUser, setIsEditingUser] = useState(!lead.assignedTo);
@@ -180,6 +180,7 @@ const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead,
   };
 
   const handleSaveDeal = () => {
+      // 1. Atualizar o lead atual na coleção 'leads'
       const updatedLead: Lead = {
           ...lead,
           name: dealForm.leadName, // Atualiza nome se mudou
@@ -195,6 +196,19 @@ const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead,
           }
       };
       onUpdate(updatedLead);
+
+      // 2. Criar uma CÓPIA para a coleção 'renovacoes'
+      const renewalCopy: Lead = {
+          ...updatedLead,
+          id: `${lead.id}_renewal_copy_${Date.now()}`, // ID com marcador para App.tsx
+          createdAt: new Date().toISOString(),
+          insuranceType: 'Renovação',
+          // O status pode ser Novo para entrar no fluxo de renovação, ou manter Fechado se for apenas arquivo.
+          // Geralmente entra como Novo/Pendente para ser trabalhado no futuro, mas aqui enviaremos como cópia fiel.
+          // Se precisar mudar status, altere aqui. Vou manter os dados fiéis.
+      };
+      onAdd(renewalCopy);
+
       setShowDealModal(false);
       setIsEditingStatus(false);
   };
@@ -235,19 +249,20 @@ const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead,
   return (
     <>
     <div className={`
-        ${cardStyle} rounded-xl shadow-sm border transition-all duration-300 w-full text-sm relative
+        ${cardStyle} rounded-xl shadow-sm border transition-all duration-300 w-full text-base relative
         ${isSplitView ? 'md:grid md:grid-cols-2' : 'flex flex-col'}
     `}>
       
       {/* LEFT COLUMN: Data + Controls + Footer */}
-      <div className={`p-6 flex flex-col justify-between ${isSplitView ? `border-r ${borderColor}` : ''}`}>
+      {/* REDUCED PADDING AND GAP */}
+      <div className={`p-3 flex flex-col justify-between gap-1 ${isSplitView ? `border-r ${borderColor}` : ''}`}>
         
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-1">
             {/* Header Name & Badges */}
             <div className="flex justify-between items-start">
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-xl text-gray-900 leading-tight">{lead.name}</h3>
+                        <h3 className="font-bold text-lg text-gray-900 leading-tight">{lead.name}</h3>
                         {lead.aiScore !== undefined && (
                             <div className="flex items-center gap-0.5 bg-indigo-50 px-1.5 py-0.5 rounded text-xs font-bold text-indigo-700 border border-indigo-100">
                             <BrainCircuit className="w-3 h-3" />
@@ -281,7 +296,7 @@ const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead,
             </div>
 
             {/* Data Fields */}
-            <div className="flex flex-col gap-2 text-gray-800">
+            <div className="flex flex-col gap-1 text-gray-800 text-sm">
                 <div className="flex items-center gap-2">
                     <Car className="w-4 h-4 text-gray-400 shrink-0" />
                     <span className="font-semibold text-gray-900">{lead.vehicleModel}</span>
@@ -304,16 +319,17 @@ const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead,
                 </div>
 
                 {/* STATUS ALTERATION BLOCK */}
-                <div className="mt-3">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 block">
+                <div className="mt-2">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5 block">
                         Status do Lead
                     </label>
                     
                     {isEditingStatus ? (
                         // EDIT MODE: Select + Confirm Button
                         <div className="flex gap-1">
+                            {/* WIDTH SET TO 40% */}
                             <select 
-                                className="flex-1 bg-white border border-gray-300 text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm font-medium text-gray-700"
+                                className="w-[40%] bg-white border border-gray-300 text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm font-medium text-gray-700"
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value as LeadStatus)}
                             >
@@ -352,16 +368,17 @@ const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead,
             </div>
 
             {/* RESPONSIBLE USER BLOCK */}
-            <div className="grid grid-cols-1 gap-2 pt-3 border-t border-gray-100 mt-1">
-                 <div className="flex flex-col gap-1">
+            <div className="grid grid-cols-1 gap-1 pt-2 border-t border-gray-100 mt-1">
+                 <div className="flex flex-col gap-0.5">
                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
                         <Users className="w-3 h-3" /> Responsável
                     </label>
                     
                     {isEditingUser ? (
                         <div className="flex gap-1">
+                            {/* WIDTH SET TO 40% */}
                             <select 
-                                className="flex-1 bg-white border border-gray-300 text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-gray-700 font-medium"
+                                className="w-[40%] bg-white border border-gray-300 text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-gray-700 font-medium"
                                 value={selectedUser}
                                 onChange={(e) => setSelectedUser(e.target.value)}
                             >
@@ -406,7 +423,7 @@ const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead,
         </div>
 
         {/* Footer Actions */}
-        <div className="mt-4 pt-3 flex items-center justify-end border-t border-gray-200">
+        <div className="mt-2 pt-2 flex items-center justify-end border-t border-gray-200">
             <div className="text-[10px] text-gray-400 font-medium">
                 Criado em: {formatCreationDate(lead.createdAt)}
             </div>
@@ -416,18 +433,18 @@ const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead,
       {/* RIGHT COLUMN: Conditional Inputs OR Deal Info */}
       {isSplitView && (
         <div className={`
-            p-6 flex flex-col gap-5 animate-fade-in border-l
+            p-3 flex flex-col gap-3 animate-fade-in border-l
             ${lead.status === LeadStatus.CLOSED ? borderColor : `bg-gray-50 ${borderColor}`}
         `}>
             
             {hasDealInfo ? (
                 // DEAL INFO VIEW (Read Only)
-                <div className="flex flex-col gap-4 h-full">
+                <div className="flex flex-col gap-2 h-full">
                      <h4 className="text-sm font-bold text-green-700 uppercase tracking-wide border-b border-green-200 pb-2 flex items-center gap-1">
                         <Shield className="w-4 h-4"/> Venda Confirmada
                      </h4>
-                     <div className="flex-1 text-sm space-y-3 overflow-y-auto text-gray-700">
-                        <div className="grid grid-cols-2 gap-3">
+                     <div className="flex-1 text-sm space-y-2 overflow-y-auto text-gray-700">
+                        <div className="grid grid-cols-2 gap-2">
                             <div>
                                 <span className="block text-gray-400 text-[10px] uppercase">Seguradora</span>
                                 <span className="font-semibold">{lead.dealInfo?.insurer}</span>
@@ -438,7 +455,7 @@ const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead,
                                 <span className="font-semibold">{lead.dealInfo?.installments}</span>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-2">
                              <div>
                                 <span className="block text-gray-400 text-[10px] uppercase">Prêmio</span>
                                 <span className="font-semibold text-green-700">
@@ -702,6 +719,11 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, onSelectLead, onUpdat
     }
 
     return matchesSearch && matchesStatus && matchesDate;
+  }).sort((a, b) => {
+    // SORTING LOGIC: Newest createdAt first
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return dateB - dateA;
   });
 
   // Calculate Pagination
@@ -800,6 +822,7 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, onSelectLead, onUpdat
                 key={lead.id} 
                 lead={lead} 
                 onUpdate={onUpdateLead}
+                onAdd={onAddLead}
             />
         ))}
 
