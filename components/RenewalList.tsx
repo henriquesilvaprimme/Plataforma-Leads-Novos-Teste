@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Lead, LeadStatus, USERS_LIST, DealInfo } from '../types';
+import { Lead, LeadStatus, User, DealInfo } from '../types';
 import { Car, Phone, Calendar, DollarSign, Percent, CreditCard, Users, RefreshCw, Bell, Search, Shield } from './Icons';
 
 interface RenewalListProps {
   leads: Lead[];
+  users: User[];
   onUpdateLead: (lead: Lead) => void;
   onAddLead: (lead: Lead) => void;
 }
@@ -66,7 +67,7 @@ const formatCreationDate = (dateString?: string) => {
     }
 };
 
-const RenewalCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void, onAdd: (l: Lead) => void }> = ({ lead, onUpdate, onAdd }) => {
+const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => void, onAdd: (l: Lead) => void }> = ({ lead, users, onUpdate, onAdd }) => {
     // States for Edit Modes
     // Initialize editing status to TRUE if lead is NEW, matching LeadList behavior
     const [isEditingStatus, setIsEditingStatus] = useState(lead.status === LeadStatus.NEW);
@@ -390,8 +391,8 @@ const RenewalCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void, onAdd: (l
                                         onChange={(e) => setSelectedUser(e.target.value)}
                                     >
                                         <option value="">-- Selecione --</option>
-                                        {USERS_LIST.map(u => (
-                                            <option key={u} value={u}>{u}</option>
+                                        {users.filter(u => u.isActive).map(u => (
+                                            <option key={u.id} value={u.name}>{u.name}</option>
                                         ))}
                                     </select>
                                     <button 
@@ -615,7 +616,7 @@ const RenewalCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void, onAdd: (l
     );
 };
 
-export const RenewalList: React.FC<RenewalListProps> = ({ leads, onUpdateLead, onAddLead }) => {
+export const RenewalList: React.FC<RenewalListProps> = ({ leads, users, onUpdateLead, onAddLead }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState<string>(''); // YYYY-MM
 
@@ -694,7 +695,8 @@ export const RenewalList: React.FC<RenewalListProps> = ({ leads, onUpdateLead, o
         {paginatedLeads.map((lead) => (
             <RenewalCard 
                 key={lead.id} 
-                lead={lead} 
+                lead={lead}
+                users={users} 
                 onUpdate={onUpdateLead}
                 onAdd={onAddLead}
             />
