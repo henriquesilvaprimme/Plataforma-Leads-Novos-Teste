@@ -16,7 +16,8 @@ const firebaseConfig = {
 };
 
 // Exportação explícita da constante de verificação
-// Se a chave for a default do código, considera não configurado.
+// Se a chave for a default do código (SUA_API_KEY_AQUI), considera não configurado.
+// Como você já preencheu, a verificação passa.
 export const isFirebaseConfigured = firebaseConfig.apiKey !== "SUA_API_KEY_AQUI";
 
 let app: any;
@@ -42,20 +43,13 @@ const parseCurrency = (val: any): number => {
     if (typeof val === 'number') return val;
     if (!val) return 0;
     try {
-        // Converte para string
         let cleanStr = val.toString();
-        
-        // Se for formato brasileiro (tem vírgula como decimal ou pontos como milhar)
         if (cleanStr.includes(',') || (cleanStr.includes('.') && cleanStr.split('.').length > 2)) {
-            // Remove R$, espaços e pontos de milhar
             cleanStr = cleanStr.replace(/[R$\s]/g, '').replace(/\./g, '');
-            // Substitui vírgula por ponto
             cleanStr = cleanStr.replace(',', '.');
         } else {
-            // Remove apenas caracteres não numéricos exceto ponto
             cleanStr = cleanStr.replace(/[^\d.]/g, '');
         }
-
         const number = parseFloat(cleanStr);
         return isNaN(number) ? 0 : number;
     } catch (e) {
@@ -81,8 +75,6 @@ const parsePercentage = (val: any): number => {
 const parseDateToISO = (val: any): string => {
     if (!val) return '';
     const str = val.toString().trim();
-    
-    // Detecta formato DD/MM/YYYY
     const brDateMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (brDateMatch) {
         const day = brDateMatch[1].padStart(2, '0');
@@ -90,12 +82,9 @@ const parseDateToISO = (val: any): string => {
         const year = brDateMatch[3];
         return `${year}-${month}-${day}`;
     }
-
-    // Se já for ISO YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
         return str.substring(0, 10);
     }
-    
     return str;
 };
 
@@ -103,11 +92,8 @@ const parseDateToISO = (val: any): string => {
 
 export const mapDocumentToLead = (doc: any): Lead => {
     const data = doc.data();
-    
-    // Mapeamento dos campos em Português (Banco) para Inglês (App)
     return {
         id: doc.id,
-        // Dados Básicos
         name: data.Nome || '',
         vehicleModel: data.Modelo || '',
         vehicleYear: data.AnoModelo || '',
@@ -119,19 +105,12 @@ export const mapDocumentToLead = (doc: any): Lead => {
         assignedTo: data.Responsavel || '',
         createdAt: data.createdAt || new Date().toISOString(),
         notes: data.notes || data.Observacoes || '',
-        
-        // Agendamento
         scheduledDate: data.agendamento || '',
-
-        // Campos Extras
         cartaoPortoNovo: data.CartaoPortoNovo,
         insurerConfirmed: data.insurerConfirmed,
         closedAt: data.closedAt,
         usuarioId: data.usuarioId,
         registeredAt: data.registeredAt,
-
-        // Dados do Fechamento
-        // Usamos parseDateToISO para garantir YYYY-MM-DD para os inputs type="date"
         dealInfo: (data.Seguradora || data.PremioLiquido || data.VigenciaInicial) ? {
             insurer: data.Seguradora || '',
             netPremium: parseCurrency(data.PremioLiquido),
@@ -141,7 +120,6 @@ export const mapDocumentToLead = (doc: any): Lead => {
             endDate: parseDateToISO(data.VigenciaFinal),
             paymentMethod: '' 
         } : undefined,
-
         endorsements: data.endorsements || []
     } as unknown as Lead;
 };
@@ -163,35 +141,33 @@ export const mapDocumentToUser = (doc: any): User => {
 // === FUNÇÃO AUXILIAR DE MAPEAMENTO REVERSO (APP -> BANCO) ===
 
 const mapAppToDb = (collectionName: string, data: any) => {
-    // Mapeamento Usuários
     if (collectionName === 'usuarios') {
         return {
-            nome: data.name,
-            usuario: data.login,
-            senha: data.password,
-            email: data.email,
-            id: data.id,
+            nome: data.name || '',
+            usuario: data.login || '',
+            senha: data.password || '',
+            email: data.email || '',
+            id: data.id || '',
             status: data.isActive ? 'Ativo' : 'Inativo',
             tipo: data.isAdmin ? 'Admin' : 'Comum',
             updatedAt: new Date().toISOString()
         };
     }
 
-    // Mapeamento Leads / Renovações / Renovados
+    // Proteção rigorosa contra undefined para evitar erro no addDoc/updateDoc
     const dbLead: any = {
-        Nome: data.name,
-        Modelo: data.vehicleModel,
-        AnoModelo: data.vehicleYear,
-        Cidade: data.city,
-        Telefone: data.phone,
-        Email: data.email, 
-        TipoSeguro: data.insuranceType,
-        createdAt: data.createdAt,
-        Responsavel: data.assignedTo,
-        status: data.status,
-        agendamento: data.scheduledDate,
-        notes: data.notes, 
-        
+        Nome: data.name || '',
+        Modelo: data.vehicleModel || '',
+        AnoModelo: data.vehicleYear || '',
+        Cidade: data.city || '',
+        Telefone: data.phone || '',
+        Email: data.email || '', 
+        TipoSeguro: data.insuranceType || '',
+        createdAt: data.createdAt || new Date().toISOString(),
+        Responsavel: data.assignedTo || '',
+        status: data.status || 'Novo',
+        agendamento: data.scheduledDate || '', // Garante string vazia se undefined
+        notes: data.notes || '', // Garante string vazia se undefined
         usuarioId: data.usuarioId || '',
         closedAt: data.closedAt || '',
         insurerConfirmed: data.insurerConfirmed || false,
@@ -199,12 +175,12 @@ const mapAppToDb = (collectionName: string, data: any) => {
     };
 
     if (data.dealInfo) {
-        dbLead.Seguradora = data.dealInfo.insurer;
-        dbLead.PremioLiquido = data.dealInfo.netPremium;
-        dbLead.Parcelamento = data.dealInfo.installments;
-        dbLead.Comissao = data.dealInfo.commission;
-        dbLead.VigenciaInicial = data.dealInfo.startDate;
-        dbLead.VigenciaFinal = data.dealInfo.endDate;
+        dbLead.Seguradora = data.dealInfo.insurer || '';
+        dbLead.PremioLiquido = data.dealInfo.netPremium || 0;
+        dbLead.Parcelamento = data.dealInfo.installments || '';
+        dbLead.Comissao = data.dealInfo.commission || 0;
+        dbLead.VigenciaInicial = data.dealInfo.startDate || '';
+        dbLead.VigenciaFinal = data.dealInfo.endDate || '';
     }
 
     if (collectionName === 'renovacoes') {
@@ -226,7 +202,6 @@ export const subscribeToCollection = (collectionName: string, callback: (data: a
         callback([]); 
         return () => {};
     }
-
     try {
         const q = query(collection(db, collectionName));
         return onSnapshot(q, (snapshot: any) => {
@@ -251,11 +226,12 @@ export const subscribeToRenovationsTotal = (callback: (total: number) => void) =
         callback(0);
         return () => {};
     }
-
     try {
+        // Acessa coleção 'totalrenovacoes', documento 'stats'
         const docRef = doc(db, 'totalrenovacoes', 'stats');
         return onSnapshot(docRef, (docSnap: any) => {
             if (docSnap.exists()) {
+                // Lê o campo 'count'
                 callback(docSnap.data().count || 0);
             } else {
                 callback(0);
@@ -274,23 +250,17 @@ export const subscribeToRenovationsTotal = (callback: (total: number) => void) =
 // === FUNÇÕES DE ESCRITA ===
 
 export const addDataToCollection = async (collectionName: string, data: any) => {
-    if (!isFirebaseConfigured || !db) {
-        alert("Firebase não configurado. Dados não serão salvos (Modo Mock).");
-        return;
-    }
-    
+    if (!isFirebaseConfigured || !db) return;
     try {
         const dbData = mapAppToDb(collectionName, data);
         await addDoc(collection(db, collectionName), dbData);
     } catch (error) {
         console.error(`Erro ao salvar em ${collectionName}:`, error);
-        alert("Erro ao salvar dados.");
     }
 };
 
 export const updateDataInCollection = async (collectionName: string, id: string, data: any) => {
     if (!isFirebaseConfigured || !db) return;
-
     try {
         const dbData = mapAppToDb(collectionName, data);
         const docRef = doc(db, collectionName, id);
@@ -300,13 +270,14 @@ export const updateDataInCollection = async (collectionName: string, id: string,
     }
 };
 
+// Atualiza a coleção totalrenovacoes com o novo número
 export const updateTotalRenovacoes = async (newTotal: number) => {
     if (!isFirebaseConfigured || !db) return;
-
     try {
         const docRef = doc(db, 'totalrenovacoes', 'stats');
+        // Usa setDoc com merge para criar se não existir ou atualizar se existir
         await setDoc(docRef, { count: newTotal }, { merge: true });
     } catch (error) {
-        console.error("Erro ao atualizar total:", error);
+        console.error("Erro ao atualizar total de renovações:", error);
     }
 };
