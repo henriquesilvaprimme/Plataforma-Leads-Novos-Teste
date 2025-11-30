@@ -254,17 +254,17 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
     `}>
       
       {/* LEFT COLUMN: Data + Controls + Footer */}
-      {/* REDUCED PADDING AND GAP */}
-      <div className={`p-3 flex flex-col justify-between gap-1 ${isSplitView ? `border-r ${borderColor}` : ''}`}>
+      {/* EXTREMELY REDUCED PADDING AND GAP FOR COMPACT HEIGHT */}
+      <div className={`p-2 flex flex-col justify-between gap-0.5 ${isSplitView ? `border-r ${borderColor}` : ''}`}>
         
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-0.5">
             {/* Header Name & Badges */}
             <div className="flex justify-between items-start">
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-lg text-gray-900 leading-tight">{lead.name}</h3>
+                        <h3 className="font-bold text-base text-gray-900 leading-tight">{lead.name}</h3>
                         {lead.aiScore !== undefined && (
-                            <div className="flex items-center gap-0.5 bg-indigo-50 px-1.5 py-0.5 rounded text-xs font-bold text-indigo-700 border border-indigo-100">
+                            <div className="flex items-center gap-0.5 bg-indigo-50 px-1.5 py-0.5 rounded text-[10px] font-bold text-indigo-700 border border-indigo-100">
                             <BrainCircuit className="w-3 h-3" />
                             {lead.aiScore}
                             </div>
@@ -273,13 +273,13 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                     
                     <div className="flex flex-wrap items-center gap-2">
                          {!isEditingStatus && (
-                            <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-bold uppercase tracking-wide border ${getStatusColor(lead.status)}`}>
+                            <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(lead.status)}`}>
                                 {lead.status}
                             </span>
                          )}
 
                         {lead.status === LeadStatus.SCHEDULED && lead.scheduledDate && !isEditingStatus && (
-                            <span className="text-xs font-medium text-purple-700 flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                            <span className="text-[10px] font-medium text-purple-700 flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
                                 <Calendar className="w-3 h-3" />
                                 {new Date(lead.scheduledDate).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' })}
                             </span>
@@ -289,37 +289,37 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
 
                 {/* Notification Bell Compact */}
                 {isScheduledToday && (
-                    <div className="text-orange-600 bg-orange-50 p-1.5 rounded-md border border-orange-200 shadow-sm animate-pulse" title="Agendamento Hoje">
-                        <Bell className="w-4 h-4" />
+                    <div className="text-orange-600 bg-orange-50 p-1 rounded-md border border-orange-200 shadow-sm animate-pulse" title="Agendamento Hoje">
+                        <Bell className="w-3 h-3" />
                     </div>
                 )}
             </div>
 
             {/* Data Fields */}
-            <div className="flex flex-col gap-1 text-gray-800 text-sm">
+            <div className="flex flex-col gap-0.5 text-gray-800 text-xs">
                 <div className="flex items-center gap-2">
-                    <Car className="w-4 h-4 text-gray-400 shrink-0" />
+                    <Car className="w-3 h-3 text-gray-400 shrink-0" />
                     <span className="font-semibold text-gray-900">{lead.vehicleModel}</span>
-                    <span className="text-xs text-gray-500">({lead.vehicleYear})</span>
+                    <span className="text-[10px] text-gray-500">({lead.vehicleYear})</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+                    <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
                     <span className="text-gray-700">{lead.city}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                    <Phone className="w-3 h-3 text-gray-400 shrink-0" />
                     <span className="text-gray-700">{lead.phone}</span>
                 </div>
                 
                 <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-indigo-500 shrink-0" />
+                    <Shield className="w-3 h-3 text-indigo-500 shrink-0" />
                     <span className="font-medium text-indigo-700">{lead.insuranceType}</span>
                 </div>
 
                 {/* STATUS ALTERATION BLOCK */}
-                <div className="mt-2">
+                <div className="mt-1">
                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5 block">
                         Status do Lead
                     </label>
@@ -327,9 +327,9 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                     {isEditingStatus ? (
                         // EDIT MODE: Select + Confirm Button
                         <div className="flex gap-1">
-                            {/* WIDTH SET TO 40% */}
+                            {/* WIDTH SET TO w-36 (Fixed ~144px) */}
                             <select 
-                                className="w-[40%] bg-white border border-gray-300 text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm font-medium text-gray-700"
+                                className="w-36 bg-white border border-gray-300 text-xs rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm font-medium text-gray-700"
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value as LeadStatus)}
                             >
@@ -344,7 +344,7 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                                 onClick={handleConfirmStatus}
                                 disabled={!isValidToSave()}
                                 className={`
-                                    px-3 py-1.5 rounded text-xs font-bold transition-all shadow-sm border
+                                    px-3 py-1 rounded text-xs font-bold transition-all shadow-sm border
                                     ${isValidToSave() 
                                         ? 'bg-green-600 hover:bg-green-700 text-white border-green-700' 
                                         : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}
@@ -358,7 +358,7 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                         <div className="flex items-center justify-between">
                              <button 
                                 onClick={() => setIsEditingStatus(true)}
-                                className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-3 py-1.5 rounded text-xs font-bold transition-colors shadow-sm uppercase tracking-wide w-full md:w-auto"
+                                className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-3 py-1 rounded text-[10px] font-bold transition-colors shadow-sm uppercase tracking-wide w-auto"
                             >
                                 Alterar
                             </button>
@@ -368,7 +368,7 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
             </div>
 
             {/* RESPONSIBLE USER BLOCK */}
-            <div className="grid grid-cols-1 gap-1 pt-2 border-t border-gray-100 mt-1">
+            <div className="grid grid-cols-1 gap-0.5 pt-1 border-t border-gray-100 mt-0.5">
                  <div className="flex flex-col gap-0.5">
                     <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
                         <Users className="w-3 h-3" /> Responsável
@@ -376,9 +376,9 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                     
                     {isEditingUser ? (
                         <div className="flex gap-1">
-                            {/* WIDTH SET TO 40% */}
+                            {/* WIDTH SET TO w-36 (Fixed ~144px) */}
                             <select 
-                                className="w-[40%] bg-white border border-gray-300 text-xs rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-gray-700 font-medium"
+                                className="w-36 bg-white border border-gray-300 text-xs rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-gray-700 font-medium"
                                 value={selectedUser}
                                 onChange={(e) => setSelectedUser(e.target.value)}
                             >
@@ -400,19 +400,19 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                                          handleConfirmUser();
                                     }
                                 }}
-                                className="bg-indigo-600 text-white border border-indigo-700 hover:bg-indigo-700 px-3 py-1.5 rounded text-xs font-bold transition-colors shadow-sm uppercase tracking-wide"
+                                className="bg-indigo-600 text-white border border-indigo-700 hover:bg-indigo-700 px-3 py-1 rounded text-xs font-bold transition-colors shadow-sm uppercase tracking-wide"
                             >
                                 Atribuir
                             </button>
                         </div>
                     ) : (
-                        <div className="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200">
+                        <div className="flex items-center justify-between bg-gray-50 p-1.5 rounded border border-gray-200">
                              <span className="text-xs font-bold text-gray-700 truncate mr-2">
                                 Atribuído para: <span className="text-indigo-700">{lead.assignedTo}</span>
                              </span>
                              <button 
                                 onClick={() => setIsEditingUser(true)}
-                                className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-2 py-1 rounded text-[10px] font-bold transition-colors shadow-sm uppercase tracking-wide"
+                                className="bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border border-yellow-300 px-2 py-0.5 rounded text-[10px] font-bold transition-colors shadow-sm uppercase tracking-wide"
                             >
                                 Alterar
                             </button>
@@ -423,7 +423,7 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
         </div>
 
         {/* Footer Actions */}
-        <div className="mt-2 pt-2 flex items-center justify-end border-t border-gray-200">
+        <div className="mt-1 pt-1 flex items-center justify-end border-t border-gray-200">
             <div className="text-[10px] text-gray-400 font-medium">
                 Criado em: {formatCreationDate(lead.createdAt)}
             </div>
@@ -433,18 +433,18 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
       {/* RIGHT COLUMN: Conditional Inputs OR Deal Info */}
       {isSplitView && (
         <div className={`
-            p-3 flex flex-col gap-3 animate-fade-in border-l
+            p-2 flex flex-col gap-2 animate-fade-in border-l
             ${lead.status === LeadStatus.CLOSED ? borderColor : `bg-gray-50 ${borderColor}`}
         `}>
             
             {hasDealInfo ? (
                 // DEAL INFO VIEW (Read Only)
-                <div className="flex flex-col gap-2 h-full">
-                     <h4 className="text-sm font-bold text-green-700 uppercase tracking-wide border-b border-green-200 pb-2 flex items-center gap-1">
-                        <Shield className="w-4 h-4"/> Venda Confirmada
+                <div className="flex flex-col gap-1 h-full">
+                     <h4 className="text-xs font-bold text-green-700 uppercase tracking-wide border-b border-green-200 pb-1 flex items-center gap-1">
+                        <Shield className="w-3 h-3"/> Venda Confirmada
                      </h4>
-                     <div className="flex-1 text-sm space-y-2 overflow-y-auto text-gray-700">
-                        <div className="grid grid-cols-2 gap-2">
+                     <div className="flex-1 text-xs space-y-1 overflow-y-auto text-gray-700">
+                        <div className="grid grid-cols-2 gap-1">
                             <div>
                                 <span className="block text-gray-400 text-[10px] uppercase">Seguradora</span>
                                 <span className="font-semibold">{lead.dealInfo?.insurer}</span>
@@ -455,7 +455,7 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                                 <span className="font-semibold">{lead.dealInfo?.installments}</span>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-1">
                              <div>
                                 <span className="block text-gray-400 text-[10px] uppercase">Prêmio</span>
                                 <span className="font-semibold text-green-700">
@@ -467,11 +467,11 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                                 <span className="font-semibold">{lead.dealInfo?.commission}%</span>
                             </div>
                         </div>
-                        <div className="border-t border-gray-200 pt-2 mt-2">
+                        <div className="border-t border-gray-200 pt-1 mt-1">
                              <span className="block text-gray-400 text-[10px] uppercase">Vigência</span>
-                             <span className="font-medium block mt-1">
+                             <span className="font-medium block mt-0.5">
                                 {formatDisplayDate(lead.dealInfo?.startDate)}
-                                <span className="mx-2 text-gray-400">até</span> 
+                                <span className="mx-1 text-gray-400">até</span> 
                                 {formatDisplayDate(lead.dealInfo?.endDate)}
                              </span>
                         </div>
@@ -480,20 +480,20 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
             ) : (
                 // INPUTS VIEW (Editing)
                 <>
-                    <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wide border-b border-gray-200 pb-2">
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide border-b border-gray-200 pb-1">
                         Complemento
                     </h4>
                     
                     {needsDate && (
                         <div>
-                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-0.5 block">
                                 <span className="flex items-center gap-1"><Calendar className="w-3 h-3"/> Data e Hora</span>
                             </label>
                             <input 
                                 type="datetime-local" 
                                 disabled={!isEditingStatus}
                                 className={`
-                                    w-full border rounded px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm
+                                    w-full border rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm
                                     ${!isEditingStatus ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300'}
                                 `}
                                 value={scheduleDate}
@@ -504,12 +504,12 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
 
                     {needsObservation && (
                             <div className="flex-1 flex flex-col">
-                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Observações</label>
+                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-0.5 block">Observações</label>
                             <textarea 
                                 disabled={!isEditingStatus}
                                 placeholder="Insira os detalhes aqui..."
                                 className={`
-                                    w-full border rounded px-3 py-3 text-xs focus:ring-1 focus:ring-indigo-500 outline-none resize-none flex-1 shadow-inner
+                                    w-full border rounded px-2 py-2 text-xs focus:ring-1 focus:ring-indigo-500 outline-none resize-none flex-1 shadow-inner
                                     ${!isEditingStatus ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300'}
                                 `}
                                 value={observation}
