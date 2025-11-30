@@ -26,11 +26,11 @@ export const Ranking: React.FC<RankingProps> = ({ leads, users }) => {
   // 1. Filtrar apenas vendas fechadas
   const sales = leads.filter(l => l.status === LeadStatus.CLOSED && l.dealInfo);
 
-  // 2. Mapear APENAS Usuários Ativos vindos do Firebase
-  const activeUsers = users.filter(u => u.isActive);
+  // 2. Mapear APENAS Usuários Ativos vindos do Firebase E que NÃO sejam do tipo Renovações
+  const activeUsers = users.filter(u => u.isActive && !u.isRenovations);
   const metricsMap = new Map<string, UserMetrics>();
 
-  // Inicializar o mapa com os usuários ativos
+  // Inicializar o mapa com os usuários ativos (excluindo os de renovações)
   activeUsers.forEach(user => {
       metricsMap.set(user.name, {
           userName: user.name,
@@ -51,7 +51,7 @@ export const Ranking: React.FC<RankingProps> = ({ leads, users }) => {
   sales.forEach(sale => {
       const assignedTo = sale.assignedTo || "";
       
-      // Só processa a venda se o usuário estiver na lista de ativos
+      // Só processa a venda se o usuário estiver na lista de ativos e permitidos
       if (metricsMap.has(assignedTo)) {
           const metrics = metricsMap.get(assignedTo)!;
           
