@@ -1,7 +1,6 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Lead, LeadStatus, User } from '../types';
-import { Trophy, Medal, DollarSign, Percent, CreditCard, ShieldCheck } from './Icons';
+import { Trophy, Medal, DollarSign, Percent, CreditCard, ShieldCheck, Calendar } from './Icons';
 
 interface RankingProps {
   leads: Lead[];
@@ -23,8 +22,21 @@ interface UserMetrics {
 }
 
 export const Ranking: React.FC<RankingProps> = ({ leads, users }) => {
-  // 1. Filtrar apenas vendas fechadas
-  const sales = leads.filter(l => l.status === LeadStatus.CLOSED && l.dealInfo);
+  // Filtro de Data: Padrão Mês Atual
+  const [filterDate, setFilterDate] = useState(() => new Date().toISOString().slice(0, 7));
+
+  // 1. Filtrar apenas vendas fechadas E que estejam dentro do mês selecionado
+  const sales = leads.filter(l => {
+      const isClosed = l.status === LeadStatus.CLOSED && !!l.dealInfo;
+      if (!isClosed) return false;
+
+      // Lógica de Filtro de Data para Ranking
+      // Prioridade: Início Vigência (dealInfo.startDate) -> Data Fechamento (closedAt)
+      const dateToCheck = l.dealInfo?.startDate || l.closedAt || '';
+      if (!dateToCheck) return false;
+      
+      return dateToCheck.startsWith(filterDate);
+  });
 
   // 2. Mapear APENAS Usuários Ativos, que NÃO sejam Renovações e NÃO sejam Admin
   const activeUsers = users.filter(u => u.isActive && !u.isRenovations && !u.isAdmin);
@@ -82,13 +94,25 @@ export const Ranking: React.FC<RankingProps> = ({ leads, users }) => {
   return (
     <div className="h-full flex flex-col">
        {/* Header */}
-       <div className="mb-6 flex items-center gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <div className="p-2 bg-yellow-100 text-yellow-600 rounded-lg">
-             <Trophy className="w-6 h-6" />
+       <div className="mb-6 flex flex-col md:flex-row items-center justify-between gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-yellow-100 text-yellow-600 rounded-lg">
+                <Trophy className="w-6 h-6" />
+            </div>
+            <div>
+                <h2 className="text-xl font-bold text-gray-800">Ranking de Vendas</h2>
+                <p className="text-xs text-gray-500">Desempenho da equipe comercial (Vendedores)</p>
+            </div>
           </div>
-          <div>
-             <h2 className="text-xl font-bold text-gray-800">Ranking de Vendas</h2>
-             <p className="text-xs text-gray-500">Desempenho da equipe comercial (Vendedores)</p>
+
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-300 rounded-lg px-3 py-1.5">
+             <Calendar className="w-4 h-4 text-gray-500" />
+             <input 
+                type="month" 
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="text-sm font-medium text-gray-700 outline-none bg-transparent cursor-pointer"
+             />
           </div>
        </div>
 
@@ -189,7 +213,7 @@ export const Ranking: React.FC<RankingProps> = ({ leads, users }) => {
           {rankingList.length === 0 && (
              <div className="py-12 text-center text-gray-400 bg-white rounded-xl border-2 border-dashed border-gray-200">
                 <Trophy className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                <p>Nenhuma venda registrada para os usuários ativos.</p>
+                <p>Nenhuma venda registrada neste período.</p>
              </div>
           )}
        </div>
