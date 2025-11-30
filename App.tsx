@@ -107,7 +107,8 @@ export default function App() {
     if (isComum && !['dashboard', 'leads', 'ranking'].includes(currentView)) {
         setCurrentView('dashboard');
     }
-    if (isRenovations && !['dashboard', 'renewals'].includes(currentView)) {
+    // Adicionado 'renewed' para usuários de renovação
+    if (isRenovations && !['dashboard', 'renewals', 'renewed'].includes(currentView)) {
         setCurrentView('dashboard');
     }
   }, [currentView, isComum, isRenovations]);
@@ -126,7 +127,7 @@ export default function App() {
         <div className="p-6 border-b border-slate-800">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <span className="bg-indigo-500 w-8 h-8 rounded-lg flex items-center justify-center">L</span>
-            Leads AI
+            {currentUser?.name || 'Leads AI'}
           </h1>
         </div>
         
@@ -162,8 +163,8 @@ export default function App() {
             </button>
           )}
 
-          {/* RENOVADOS: Admin Apenas (User de renovação não vê conforme pedido) */}
-          {isAdmin && (
+          {/* RENOVADOS: Admin ou Renovações */}
+          {(isAdmin || isRenovations) && (
             <button 
                 onClick={() => { setCurrentView('renewed'); }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${currentView === 'renewed' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
