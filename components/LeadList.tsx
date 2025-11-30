@@ -10,6 +10,25 @@ interface LeadListProps {
   onAddLead: (lead: Lead) => void;
 }
 
+// Lista de Seguradoras
+const INSURERS_LIST = [
+  "Porto Seguro",
+  "Azul Seguros",
+  "Itau Seguro",
+  "Tokio Marine",
+  "Yelum Seguros",
+  "Allianz Seguros",
+  "Bradesco Seguros",
+  "Suhai Seguros",
+  "Zurich Seguros",
+  "Aliro Seguros",
+  "Mitsui Seguros",
+  "Hdi Seguros",
+  "Alfa Seguros",
+  "Mapfre Seguros",
+  "Demais Seguradoras"
+];
+
 // Helper robusto para datas
 const formatDisplayDate = (dateString?: string) => {
     if (!dateString) return '-';
@@ -522,13 +541,16 @@ const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead,
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Seguradora</label>
-                            <input 
-                                type="text"
-                                placeholder="Ex: Porto, Allianz"
+                            <select 
                                 value={dealForm.insurer}
                                 onChange={(e) => setDealForm({...dealForm, insurer: e.target.value})}
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none"
-                            />
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-white"
+                            >
+                                <option value="">Selecione</option>
+                                {INSURERS_LIST.map(ins => (
+                                    <option key={ins} value={ins}>{ins}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Meio de Pagamento</label>
@@ -579,7 +601,7 @@ const LeadCard: React.FC<{ lead: Lead; onUpdate: (l: Lead) => void }> = ({ lead,
                             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-white"
                         >
                             <option value="">Selecione</option>
-                            <option value="À Vista">À Vista</option>
+                            {/* Removido À Vista, deixando apenas 1 a 12 */}
                             {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
                                 <option key={num} value={`${num}x`}>{num}x</option>
                             ))}
