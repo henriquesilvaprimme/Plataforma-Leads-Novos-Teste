@@ -49,12 +49,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
 
   const isAdmin = currentUser?.isAdmin;
 
-  // Filtragem de dados para o usuário atual
+  // Filtragem de dados
   const userFilter = (lead: Lead) => {
     if (!currentUser) return false;
-    // Admin vê tudo? O pedido foi "Dashboard deve mostrar somente os contadores de cada usuario individualmente"
-    // Assumindo que até Admin vê seu dashboard individual, ou se quiser Global, teria que mudar aqui.
-    // Seguindo a risca: "cada usuario individualmente"
+    // Se for Admin, vê tudo. Se não, vê apenas os atribuídos a si mesmo.
+    if (currentUser.isAdmin) return true;
     return lead.assignedTo === currentUser.name;
   };
 
@@ -62,11 +61,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
   const filteredRenewalLeads = renewalLeadsData.filter(userFilter);
 
   const calculateMetrics = (subset: Lead[], isRenewalSection: boolean): Metrics => {
-    // Total agora é baseado na contagem individual, ignorando o total manual global para a visão individual
+    // Total baseado na filtragem (Se admin, total geral. Se user, total dele)
     let total = subset.length;
     
-    // Se fosse visão global, usaríamos manualRenewalTotal em renovações. 
-    // Como é individual, usamos a contagem de leads atribuídos.
+    // Se for Admin na sessão de renovações, podemos usar o manual se desejar, 
+    // mas a lógica atual pede para mostrar contadores individuais/gerais calculados.
+    // Manteremos a lógica de subset.length para consistência dos gráficos.
     
     const closedDeals = subset.filter(l => l.status === LeadStatus.CLOSED);
     const sales = closedDeals.length;
@@ -119,10 +119,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
     ? calculateMetrics(filteredNewLeads, false) 
     : calculateMetrics(filteredRenewalLeads, true);
 
+  // Se estivermos na aba Renovações e quisermos usar o total manual APENAS para o card de KPI (visual):
+  // (Opcional: dependendo de como você quer exibir. Vou manter o cálculo real para consistência com os gráficos)
+  const displayTotal = (section === 'RENEWAL' && manualRenewalTotal > 0 && isAdmin) ? manualRenewalTotal : metrics.total;
+
   const pieData = [
     { name: 'Renovados', value: metrics.sales, color: '#16a34a' }, 
     { name: 'Perdidos', value: metrics.lost, color: '#dc2626' }, 
-    { name: 'Pendentes', value: Math.max(0, metrics.total - metrics.sales - metrics.lost), color: '#e5e7eb' }, 
+    { name: 'Pendentes', value: Math.max(0, displayTotal - metrics.sales - metrics.lost), color: '#e5e7eb' }, 
   ];
 
   return (
@@ -132,7 +136,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
       <div className="flex items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-100">
          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <LayoutDashboard className="w-6 h-6 text-indigo-600" />
-            Dashboard ({currentUser?.name})
+            Dashboard ({isAdmin ? 'Visão Geral' : currentUser?.name})
          </h1>
          
          <div className="flex items-center gap-4 bg-gray-50 rounded-lg p-1 border border-gray-200">
@@ -164,11 +168,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 relative overflow-hidden">
                 <div className="flex justify-between items-start z-10 relative">
                     <div className="w-full">
-                        <p className="text-sm text-gray-500 font-bold uppercase mb-1">
-                            {section === 'NEW' ? 'Meus Leads' : 'Minhas Renovações'}
+                        <p className="text-sm text-gray-500 font-bold uppercase mb-1 flex items-center justify-between">
+                            {section === 'NEW' ? 'Meus Leads' : 'Total Renovações'}
+                            {section === 'RENEWAL' && (
+                                <button 
+                                    onClick={() => {
+                                        setEditTotalValue(displayTotal.toString());
+                                        setIsEditingTotal(true);
+                                    }}
+                                    className="text-[10px] text-blue-600 hover:underline"
+                                >
+                                    Alterar
+                                </button>
+                            )}
                         </p>
                         
-                        <p className="text-3xl font-extrabold text-gray-900">{metrics.total}</p>
+                        {isEditingTotal && section === 'RENEWAL' ? (
+                            <div className="flex gap-2 items-center">
+                                <input 
+                                    type="number" 
+                                    value={editTotalValue}
+                                    onChange={(e) => setEditTotalValue(e.target.value)}
+                                    className="w-20 border rounded px-1 py-0.5 text-lg"
+                                />
+                                <button 
+                                    onClick={() => {
+                                        onUpdateRenewalTotal(Number(editTotalValue));
+                                        setIsEditingTotal(false);
+                                    }}
+                                    className="text-xs bg-green-600 text-white px-2 py-1 rounded"
+                                >
+                                    OK
+                                </button>
+                            </div>
+                        ) : (
+                            <p className="text-3xl font-extrabold text-gray-900">{displayTotal}</p>
+                        )}
                     </div>
                     
                     <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg shrink-0 ml-2">
