@@ -1,11 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { Lead, LeadStatus } from '../types';
 import { Users, LayoutDashboard, BrainCircuit, ChevronLeft, ChevronRight, Shield, DollarSign, Percent, CheckCircle, XCircle } from './Icons';
 
 interface DashboardProps {
-  newLeadsData: Lead[]; // Dados da coleção 'leads'
-  renewalLeadsData: Lead[]; // Dados da coleção 'renovacoes' e 'renovados' combinados ou separados conforme lógica
+  newLeadsData: Lead[]; 
+  renewalLeadsData: Lead[]; 
   manualRenewalTotal: number;
   onUpdateRenewalTotal: (val: number) => void;
 }
@@ -33,10 +34,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
   const [editTotalValue, setEditTotalValue] = useState('');
 
   const calculateMetrics = (subset: Lead[], isRenewalSection: boolean): Metrics => {
-    // Se for renovação, o total pode vir do banco (manualRenewalTotal) se > 0
+    // Se for seção de renovações, USAMOS ESTRITAMENTE O VALOR MANUAL DO BANCO
     let total = subset.length;
     
-    if (isRenewalSection && manualRenewalTotal > 0) {
+    if (isRenewalSection) {
+        // Se estivermos em Renovações, o total é o valor manual, não importa se é 0 ou mil.
+        // É a "Carteira Total" definida pelo usuário.
         total = manualRenewalTotal;
     }
 
@@ -48,7 +51,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
     
     const conversionRate = total > 0 ? (sales / total) * 100 : 0;
 
-    // Financials & Insurers (Based on CLOSED deals only)
     let totalPremium = 0;
     let totalCommission = 0;
     let portoCount = 0;
@@ -61,7 +63,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
             totalPremium += lead.dealInfo.netPremium;
             totalCommission += lead.dealInfo.commission;
 
-            // Proteção contra undefined insurer
             const insurer = (lead.dealInfo.insurer || '').toLowerCase();
             
             if (insurer.includes('porto')) portoCount++;
@@ -93,10 +94,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
 
   // Data for Renewal Pie Chart
   const pieData = [
-    { name: 'Renovados', value: metrics.sales, color: '#16a34a' }, // Green-600
-    { name: 'Perdidos', value: metrics.lost, color: '#dc2626' }, // Red-600
-    // Pendentes agora respeita o total manual se definido
-    { name: 'Pendentes', value: Math.max(0, metrics.total - metrics.sales - metrics.lost), color: '#e5e7eb' }, // Gray-200
+    { name: 'Renovados', value: metrics.sales, color: '#16a34a' }, 
+    { name: 'Perdidos', value: metrics.lost, color: '#dc2626' }, 
+    // Pendentes agora respeita o total calculado (manual ou lista)
+    { name: 'Pendentes', value: Math.max(0, metrics.total - metrics.sales - metrics.lost), color: '#e5e7eb' }, 
   ];
 
   return (
@@ -182,7 +183,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
                         )}
                     </div>
                     
-                    {/* Icone só aparece se não estiver editando para não poluir */}
                     {!isEditingTotal && (
                         <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg shrink-0 ml-2">
                             <Users className="w-6 h-6" />
@@ -190,7 +190,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
                     )}
                 </div>
                 
-                {/* For Renewal: Show Pie Chart / For New: Show Rate number */}
                 {section === 'RENEWAL' ? (
                      <div className="mt-4 h-32 flex items-center justify-center relative">
                         <ResponsiveContainer width="100%" height="100%">
@@ -262,7 +261,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ newLeadsData, renewalLeads
                  </div>
             </div>
 
-            {/* CARD 3: CONTACT METRICS (Only for New) - REMOVED CARTEIRA RENOVADA for RENEWALS */}
+            {/* CARD 3: CONTACT METRICS (Only for New) */}
             {section === 'NEW' && (
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between">
                      <div className="space-y-4">
