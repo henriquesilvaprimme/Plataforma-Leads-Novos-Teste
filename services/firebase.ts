@@ -16,7 +16,7 @@ const firebaseConfig = {
 };
 
 // Exportação explícita da constante de verificação
-export const isFirebaseConfigured = firebaseConfig.apiKey !== "";
+export const isFirebaseConfigured = firebaseConfig.apiKey !== "SUA_API_KEY_AQUI";
 
 let app: any;
 let db: any;
@@ -35,23 +35,132 @@ if (isFirebaseConfigured) {
     console.warn("Firebase não configurado. O app rodará em modo de visualização (Mock).");
 }
 
-// === FUNÇÕES AUXILIARES DE MAPEAMENTO ===
+// === FUNÇÕES AUXILIARES DE MAPEAMENTO (BANCO -> APP) ===
 
 export const mapDocumentToLead = (doc: any): Lead => {
     const data = doc.data();
+    
+    // Mapeamento dos campos em Português (Banco) para Inglês (App)
     return {
         id: doc.id,
-        ...data,
-        createdAt: data.createdAt || new Date().toISOString()
-    } as Lead;
+        // Dados Básicos
+        name: data.Nome || '',
+        vehicleModel: data.Modelo || '',
+        vehicleYear: data.AnoModelo || '',
+        city: data.Cidade || '',
+        phone: data.Telefone || '',
+        insuranceType: data.TipoSeguro || '',
+        status: data.status || 'Novo',
+        email: data.Email || data.email || '', // Mapeando email
+        assignedTo: data.Responsavel || '',
+        createdAt: data.createdAt || new Date().toISOString(),
+        notes: data.notes || data.Observacoes || '', // Mantendo compatibilidade
+        
+        // Agendamento
+        scheduledDate: data.agendamento || '',
+
+        // Campos Extras mencionados
+        cartaoPortoNovo: data.CartaoPortoNovo,
+        insurerConfirmed: data.insurerConfirmed,
+        closedAt: data.closedAt,
+        usuarioId: data.usuarioId,
+        registeredAt: data.registeredAt, // Para renovações
+
+        // Dados do Fechamento (Achatados no banco -> Objeto no App)
+        dealInfo: (data.Seguradora || data.PremioLiquido) ? {
+            insurer: data.Seguradora || '',
+            netPremium: Number(data.PremioLiquido) || 0,
+            commission: Number(data.Comissao) || 0,
+            installments: data.Parcelamento || '',
+            startDate: data.VigenciaInicial || '',
+            endDate: data.VigenciaFinal || '',
+            paymentMethod: '' // Não especificado na lista do banco, mantém vazio ou mapeia se existir
+        } : undefined,
+
+        // Manter endossos se existirem (estrutura complexa)
+        endorsements: data.endorsements || []
+    } as unknown as Lead;
 };
 
 export const mapDocumentToUser = (doc: any): User => {
     const data = doc.data();
     return {
-        id: doc.id,
-        ...data
+        id: doc.id, // ID vem do ID do documento ou campo 'id'
+        name: data.nome || '',
+        login: data.usuario || '',
+        password: data.senha || '',
+        email: data.email || '',
+        // Conversão de Status e Tipo (String PT -> Boolean)
+        isActive: data.status === 'Ativo', 
+        isAdmin: data.tipo === 'Admin',
+        avatarColor: 'bg-indigo-600' // Padrão visual
     } as User;
+};
+
+// === FUNÇÃO AUXILIAR DE MAPEAMENTO REVERSO (APP -> BANCO) ===
+
+const mapAppToDb = (collectionName: string, data: any) => {
+    // Mapeamento Usuários
+    if (collectionName === 'usuarios') {
+        return {
+            nome: data.name,
+            usuario: data.login,
+            senha: data.password,
+            email: data.email,
+            id: data.id,
+            status: data.isActive ? 'Ativo' : 'Inativo',
+            tipo: data.isAdmin ? 'Admin' : 'Comum',
+            updatedAt: new Date().toISOString()
+        };
+    }
+
+    // Mapeamento Leads / Renovações / Renovados
+    const dbLead: any = {
+        Nome: data.name,
+        Modelo: data.vehicleModel,
+        AnoModelo: data.vehicleYear,
+        Cidade: data.city,
+        Telefone: data.phone,
+        Email: data.email, // Salvando email
+        TipoSeguro: data.insuranceType,
+        createdAt: data.createdAt,
+        Responsavel: data.assignedTo,
+        status: data.status,
+        agendamento: data.scheduledDate,
+        notes: data.notes, // Salvando notas também
+        
+        // Campos Extras
+        usuarioId: data.usuarioId || '',
+        closedAt: data.closedAt || '',
+        insurerConfirmed: data.insurerConfirmed || false,
+        CartaoPortoNovo: data.cartaoPortoNovo || false
+    };
+
+    // Dados de Venda (Achatando o objeto dealInfo para colunas soltas)
+    if (data.dealInfo) {
+        dbLead.Seguradora = data.dealInfo.insurer;
+        dbLead.PremioLiquido = data.dealInfo.netPremium;
+        dbLead.Parcelamento = data.dealInfo.installments;
+        dbLead.Comissao = data.dealInfo.commission;
+        dbLead.VigenciaInicial = data.dealInfo.startDate;
+        dbLead.VigenciaFinal = data.dealInfo.endDate;
+    }
+
+    // Se for renovação, adiciona registeredAt
+    if (collectionName === 'renovacoes' && data.registeredAt) {
+        dbLead.registeredAt = data.registeredAt;
+    }
+    // Se não tiver registeredAt mas for salvar em renovacoes, cria data atual
+    if (collectionName === 'renovacoes' && !dbLead.registeredAt) {
+        dbLead.registeredAt = new Date().toISOString();
+    }
+
+    // Endossos (mantendo estrutura de array se houver)
+    if (data.endorsements) {
+        dbLead.endorsements = data.endorsements;
+    }
+
+    return dbLead;
 };
 
 // === FUNÇÕES DE LEITURA (REAL-TIME) ===
@@ -115,12 +224,10 @@ export const addDataToCollection = async (collectionName: string, data: any) => 
     }
     
     try {
-        // Remove ID se existir para deixar o Firestore gerar (ou mantenha se for intencional)
-        const { id, ...rest } = data;
-        await addDoc(collection(db, collectionName), {
-            ...rest,
-            createdAt: new Date().toISOString()
-        });
+        // Converte os dados do App para o formato do Banco (Português)
+        const dbData = mapAppToDb(collectionName, data);
+        
+        await addDoc(collection(db, collectionName), dbData);
     } catch (error) {
         console.error(`Erro ao salvar em ${collectionName}:`, error);
         alert("Erro ao salvar dados.");
@@ -131,8 +238,11 @@ export const updateDataInCollection = async (collectionName: string, id: string,
     if (!isFirebaseConfigured || !db) return;
 
     try {
+        // Converte os dados do App para o formato do Banco (Português)
+        const dbData = mapAppToDb(collectionName, data);
+
         const docRef = doc(db, collectionName, id);
-        await updateDoc(docRef, data);
+        await updateDoc(docRef, dbData);
     } catch (error) {
         console.error(`Erro ao atualizar ${collectionName}:`, error);
     }
