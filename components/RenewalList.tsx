@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Lead, LeadStatus, User, DealInfo } from '../types';
-import { Car, Phone, Calendar, DollarSign, Percent, CreditCard, Users, RefreshCw, Bell, Search, Shield } from './Icons';
+import { Car, Phone, Calendar, DollarSign, Percent, CreditCard, Users, RefreshCw, Bell, Search, Shield, AlertTriangle } from './Icons';
 
 interface RenewalListProps {
   leads: Lead[];
@@ -69,6 +70,9 @@ const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => 
         startDate: new Date().toISOString().split('T')[0],
         endDate: ''
     });
+
+    // Endorsement State
+    const [showEndorseInfo, setShowEndorseInfo] = useState<string | null>(null);
 
     const isAdmin = currentUser?.isAdmin;
     const isLocked = (lead.status === LeadStatus.CLOSED || lead.status === LeadStatus.LOST) && !isAdmin;
@@ -238,12 +242,45 @@ const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => 
                                 )}
                             </div>
                         </div>
-                        {isScheduledToday && (
-                            <div className="text-orange-600 bg-orange-50 p-1 rounded-md border border-orange-200 shadow-sm animate-pulse" title="Agendamento Hoje">
-                                <Bell className="w-3 h-3" />
-                            </div>
-                        )}
+
+                        <div className="flex flex-col items-end gap-1">
+                            {isScheduledToday && (
+                                <div className="text-orange-600 bg-orange-50 p-1 rounded-md border border-orange-200 shadow-sm animate-pulse" title="Agendamento Hoje">
+                                    <Bell className="w-3 h-3" />
+                                </div>
+                            )}
+
+                             {/* Endorsement Alert Badges */}
+                             {lead.endorsements && lead.endorsements.length > 0 && (
+                                <div className="flex flex-col gap-0.5 items-end">
+                                   {lead.endorsements.map(endorsement => (
+                                      <button 
+                                        key={endorsement.id}
+                                        onClick={() => setShowEndorseInfo(endorsement.id === showEndorseInfo ? null : endorsement.id)}
+                                        className="flex items-center gap-1 text-[10px] bg-yellow-50 text-yellow-700 px-1.5 py-0.5 rounded border border-yellow-200 hover:bg-yellow-100 transition-colors"
+                                      >
+                                         <AlertTriangle className="w-3 h-3" />
+                                         Endosso
+                                      </button>
+                                   ))}
+                                </div>
+                             )}
+                        </div>
                     </div>
+
+                    {/* Endorsement Info Popover (In-Card) */}
+                    {showEndorseInfo && (
+                        <div className="bg-yellow-50 p-2 rounded border border-yellow-200 text-xs text-gray-700 animate-fade-in mb-1 mt-1">
+                            {lead.endorsements?.filter(e => e.id === showEndorseInfo).map(e => (
+                               <div key={e.id} className="space-y-0.5">
+                                  <p className="font-bold text-yellow-800 border-b border-yellow-200 pb-0.5 mb-0.5">Endosso</p>
+                                  <p>Veículo: <b>{e.vehicleModel}</b></p>
+                                  <p>Prêmio: <b>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(e.netPremium)}</b></p>
+                                  <p>Vigência: <b>{formatDisplayDate(e.startDate)}</b></p>
+                               </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="flex flex-col gap-0.5 text-gray-800 text-xs">
                         <div className="flex items-center gap-2">
