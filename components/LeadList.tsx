@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lead, LeadStatus, User, DealInfo } from '../types';
-import { Search, Plus, Car, Calendar, MapPin, Shield, Phone, BrainCircuit, Users, Bell, ChevronRight } from './Icons';
+import { Search, Plus, Car, Calendar, MapPin, Shield, Phone, BrainCircuit, Users, Bell, ChevronRight, Edit, Check } from './Icons';
 
 interface LeadListProps {
   leads: Lead[];
@@ -52,6 +52,7 @@ const formatCreationDate = (dateString?: string) => {
 const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => void; onAdd: (l: Lead) => void; currentUser: User | null }> = ({ lead, users, onUpdate, onAdd, currentUser }) => {
   const [isEditingStatus, setIsEditingStatus] = useState(lead.status === LeadStatus.NEW);
   const [isEditingUser, setIsEditingUser] = useState(!lead.assignedTo);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
 
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | "">(lead.status === LeadStatus.NEW ? "" : lead.status); 
   const [selectedUser, setSelectedUser] = useState<string>(lead.assignedTo || '');
@@ -132,6 +133,12 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
     };
     onUpdate(updatedLead);
     setIsEditingStatus(false);
+  };
+
+  const handleSaveNotes = () => {
+      const updatedLead = { ...lead, notes: observation };
+      onUpdate(updatedLead);
+      setIsEditingNotes(false);
   };
 
   const handleSaveDeal = () => {
@@ -444,13 +451,32 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
 
                     {needsObservation && (
                             <div className="flex-1 flex flex-col">
-                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-0.5 block">Observações</label>
+                            <div className="flex justify-between items-end mb-0.5">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase block">Observações</label>
+                                {!isEditingStatus && (
+                                    isEditingNotes ? (
+                                        <button 
+                                            onClick={handleSaveNotes}
+                                            className="flex items-center gap-1 text-[9px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded border border-green-200 hover:bg-green-100"
+                                        >
+                                            <Check className="w-3 h-3" /> Confirmar
+                                        </button>
+                                    ) : (
+                                        <button 
+                                            onClick={() => setIsEditingNotes(true)}
+                                            className="flex items-center gap-1 text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 hover:bg-blue-100"
+                                        >
+                                            <Edit className="w-3 h-3" /> Alterar
+                                        </button>
+                                    )
+                                )}
+                            </div>
                             <textarea 
-                                disabled={!isEditingStatus}
+                                disabled={!isEditingStatus && !isEditingNotes}
                                 placeholder="Insira os detalhes aqui..."
                                 className={`
                                     w-full border rounded px-2 py-2 text-xs focus:ring-1 focus:ring-indigo-500 outline-none resize-none flex-1 shadow-inner
-                                    ${!isEditingStatus ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300'}
+                                    ${(!isEditingStatus && !isEditingNotes) ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300'}
                                 `}
                                 value={observation}
                                 onChange={(e) => setObservation(e.target.value)}
@@ -685,13 +711,15 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, 
             ))}
           </select>
           
-          <button 
-            onClick={() => setShowNewLeadModal(true)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded transition-all shadow-sm flex items-center justify-center gap-2 text-sm font-bold"
-          >
-            <Plus className="w-4 h-4" />
-            Novo
-          </button>
+          {currentUser?.isAdmin && (
+            <button 
+                onClick={() => setShowNewLeadModal(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded transition-all shadow-sm flex items-center justify-center gap-2 text-sm font-bold"
+            >
+                <Plus className="w-4 h-4" />
+                Novo
+            </button>
+          )}
         </div>
       </div>
 
