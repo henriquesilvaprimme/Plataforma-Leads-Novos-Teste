@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { User } from '../types';
 import { UserCog, Eye, EyeOff, Power, ShieldCheck, Users, Search, Plus } from './Icons';
@@ -46,6 +47,13 @@ const UserCard: React.FC<{ user: User; onUpdate: (u: User) => void }> = ({ user,
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${user.isActive ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
                       {user.isActive ? 'Ativo' : 'Inativo'}
                   </span>
+                  
+                  {/* Badge de Renovações */}
+                  {user.isRenovations && (
+                     <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-700 border border-blue-200">
+                        Renovações
+                     </span>
+                  )}
               </div>
           </div>
 
@@ -124,7 +132,8 @@ export const UserList: React.FC<UserListProps> = ({ users, onUpdateUser, onAddUs
     email: '',
     password: '',
     isAdmin: false,
-    isActive: true
+    isActive: true,
+    isRenovations: false
   });
 
   const filteredUsers = users.filter(user => {
@@ -147,13 +156,14 @@ export const UserList: React.FC<UserListProps> = ({ users, onUpdateUser, onAddUs
           email: newUser.email || '',
           password: newUser.password,
           isAdmin: !!newUser.isAdmin,
+          isRenovations: !!newUser.isRenovations, // Salva o novo campo
           isActive: true,
           avatarColor: 'bg-indigo-600' // Default color
       };
 
       onAddUser(user);
       setShowCreateModal(false);
-      setNewUser({ name: '', login: '', email: '', password: '', isAdmin: false, isActive: true });
+      setNewUser({ name: '', login: '', email: '', password: '', isAdmin: false, isRenovations: false, isActive: true });
   };
 
   return (
@@ -264,18 +274,35 @@ export const UserList: React.FC<UserListProps> = ({ users, onUpdateUser, onAddUs
                         />
                     </div>
 
-                    <div className="flex items-center gap-2 bg-gray-50 p-3 rounded border border-gray-200">
-                        <input 
-                            type="checkbox"
-                            id="newAdmin"
-                            checked={newUser.isAdmin}
-                            onChange={(e) => setNewUser({...newUser, isAdmin: e.target.checked})}
-                            className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                        />
-                        <label htmlFor="newAdmin" className="text-sm font-medium text-gray-700 select-none cursor-pointer flex items-center gap-1">
-                            <ShieldCheck className="w-4 h-4 text-gray-500" />
-                            Usuário Administrador?
-                        </label>
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 bg-gray-50 p-3 rounded border border-gray-200">
+                            <input 
+                                type="checkbox"
+                                id="newAdmin"
+                                checked={newUser.isAdmin}
+                                onChange={(e) => setNewUser({...newUser, isAdmin: e.target.checked})}
+                                className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                            />
+                            <label htmlFor="newAdmin" className="text-sm font-medium text-gray-700 select-none cursor-pointer flex items-center gap-1">
+                                <ShieldCheck className="w-4 h-4 text-gray-500" />
+                                Usuário Administrador?
+                            </label>
+                        </div>
+
+                        {/* Novo campo de Renovações */}
+                        <div className="flex items-center gap-2 bg-gray-50 p-3 rounded border border-gray-200">
+                            <input 
+                                type="checkbox"
+                                id="newRenovations"
+                                checked={newUser.isRenovations}
+                                onChange={(e) => setNewUser({...newUser, isRenovations: e.target.checked})}
+                                className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                            />
+                            <label htmlFor="newRenovations" className="text-sm font-medium text-gray-700 select-none cursor-pointer flex items-center gap-1">
+                                <Users className="w-4 h-4 text-gray-500" />
+                                Acesso Renovações?
+                            </label>
+                        </div>
                     </div>
                 </div>
 
