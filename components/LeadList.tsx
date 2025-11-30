@@ -139,6 +139,7 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
           ...lead,
           name: dealForm.leadName,
           status: LeadStatus.CLOSED,
+          closedAt: new Date().toISOString(),
           dealInfo: {
               insurer: dealForm.insurer,
               paymentMethod: dealForm.paymentMethod,
@@ -211,7 +212,7 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                         )}
                         
                         {!isEditingStatus && (
-                            <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(lead.status)}`}>
+                            <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${getStatusColor(lead.status)}`}>
                                 {lead.status}
                             </span>
                         )}
@@ -312,14 +313,14 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                     
                     {/* Se não for admin, só mostra o texto. Se for admin, mostra controles */}
                     {!isAdmin ? (
-                        <div className="flex items-center justify-between bg-gray-50 p-1.5 rounded border border-gray-200">
-                             <span className="text-xs font-bold text-gray-700 truncate mr-2">
+                        <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded border border-gray-200 w-fit max-w-full">
+                             <span className="text-xs font-bold text-gray-700 truncate">
                                 Atribuído para: <span className="text-indigo-700">{lead.assignedTo || 'Ninguém'}</span>
                              </span>
                         </div>
                     ) : (
                         isEditingUser ? (
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 w-fit max-w-full">
                                 <select 
                                     className="w-36 bg-white border border-gray-300 text-xs rounded px-2 py-1 focus:ring-1 focus:ring-indigo-500 outline-none shadow-sm text-gray-700 font-medium"
                                     value={selectedUser}
@@ -349,8 +350,8 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
                                 </button>
                             </div>
                         ) : (
-                            <div className="flex items-center justify-between bg-gray-50 p-1.5 rounded border border-gray-200">
-                                <span className="text-xs font-bold text-gray-700 truncate mr-2">
+                            <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded border border-gray-200 w-fit max-w-full">
+                                <span className="text-xs font-bold text-gray-700 truncate">
                                     Atribuído para: <span className="text-indigo-700">{lead.assignedTo}</span>
                                 </span>
                                 <button 
@@ -469,7 +470,7 @@ const LeadCard: React.FC<{ lead: Lead; users: User[]; onUpdate: (l: Lead) => voi
     </div>
 
     {showDealModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
                 <div className="bg-green-600 px-6 py-4 flex justify-between items-center">
                     <h2 className="text-white font-bold text-lg flex items-center gap-2">
@@ -618,6 +619,7 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, users, onSelectLead, 
 
     return matchesSearch && matchesStatus && matchesDate && isAssignedToUser;
   }).sort((a, b) => {
+    // Sort by createdAt Descending (Newest first)
     const dateA = new Date(a.createdAt).getTime();
     const dateB = new Date(b.createdAt).getTime();
     return dateB - dateA;
