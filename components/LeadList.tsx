@@ -610,12 +610,15 @@ export const LeadList: React.FC<LeadListProps> = ({ leads, onSelectLead, onUpdat
 
   const filteredLeads = leads.filter(lead => {
     const term = searchTerm.toLowerCase();
-    // Adjusted to search ONLY Name and Phone
-    const matchesSearch = lead.name.toLowerCase().includes(term) || 
-                          lead.phone.includes(term); 
+    // Proteção: usa string vazia se nome ou telefone forem undefined
+    const name = lead.name || '';
+    const phone = lead.phone || '';
+    
+    const matchesSearch = name.toLowerCase().includes(term) || 
+                          phone.includes(term); 
     const matchesStatus = filterStatus === 'all' || lead.status === filterStatus;
     // Check if created date matches YYYY-MM
-    const matchesDate = !filterDate || lead.createdAt.startsWith(filterDate);
+    const matchesDate = !filterDate || (lead.createdAt && lead.createdAt.startsWith(filterDate));
 
     return matchesSearch && matchesStatus && matchesDate;
   });
