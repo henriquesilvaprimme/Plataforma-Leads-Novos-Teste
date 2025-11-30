@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Lead, LeadStatus, USERS_LIST, DealInfo } from '../types';
 import { Car, Phone, Calendar, DollarSign, Percent, CreditCard, Users, CheckCircle, Bell, Search, Shield } from './Icons';
@@ -7,13 +8,40 @@ interface RenewedListProps {
   onUpdateLead: (lead: Lead) => void;
 }
 
+const formatDisplayDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    if (dateString.includes('/')) return dateString;
+    if (dateString.includes('-')) {
+        try {
+            const date = new Date(dateString.includes('T') ? dateString : `${dateString}T00:00:00`);
+            return date.toLocaleDateString('pt-BR');
+        } catch (e) {
+            return dateString;
+        }
+    }
+    return dateString;
+};
+
 const isToday = (dateString?: string) => {
     if (!dateString) return false;
-    const date = new Date(dateString);
-    const today = new Date();
-    return date.getDate() === today.getDate() &&
-           date.getMonth() === today.getMonth() &&
-           date.getFullYear() === today.getFullYear();
+    if (dateString.includes('-')) {
+        const date = new Date(dateString);
+        const today = new Date();
+        return date.getDate() === today.getDate() &&
+            date.getMonth() === today.getMonth() &&
+            date.getFullYear() === today.getFullYear();
+    }
+    return false;
+};
+
+const formatCreationDate = (dateString?: string) => {
+    if (!dateString) return '-';
+    if (dateString.includes('/')) return dateString;
+    try {
+        return new Date(dateString).toLocaleDateString('pt-BR');
+    } catch (e) {
+        return dateString;
+    }
 };
 
 const RenewedCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void }> = ({ lead, onUpdate }) => {
@@ -202,15 +230,16 @@ const RenewedCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void }> = ({ le
                         </div>
                         <div className="flex items-center gap-2">
                             <CreditCard className="w-4 h-4 text-gray-400 shrink-0" />
-                            <span className="text-gray-700">{lead.dealInfo?.installments}</span>
+                            <span className="text-gray-700 font-medium">Pagamento/Parc: 
+                                <span className="text-gray-900 ml-1">{lead.dealInfo?.installments}</span>
+                            </span>
                         </div>
                         
-                        {/* Start Date Added */}
                         <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-blue-400 shrink-0" />
                             <span className="text-gray-700 text-xs uppercase font-bold">Vigência Inicial:</span>
                             <span className="text-blue-700 font-bold text-xs bg-blue-50 px-1.5 rounded border border-blue-100">
-                                {lead.dealInfo?.startDate ? new Date(lead.dealInfo.startDate).toLocaleDateString('pt-BR') : '-'}
+                                {formatDisplayDate(lead.dealInfo?.startDate)}
                             </span>
                         </div>
 
@@ -218,7 +247,7 @@ const RenewedCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void }> = ({ le
                             <Calendar className="w-4 h-4 text-indigo-400 shrink-0" />
                             <span className="text-gray-700 text-xs uppercase font-bold">Vigência Final:</span>
                             <span className="text-indigo-700 font-bold text-xs bg-indigo-50 px-1.5 rounded border border-indigo-100">
-                                {lead.dealInfo?.endDate ? new Date(lead.dealInfo.endDate).toLocaleDateString('pt-BR') : '-'}
+                                {formatDisplayDate(lead.dealInfo?.endDate)}
                             </span>
                         </div>
 
@@ -305,6 +334,12 @@ const RenewedCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void }> = ({ le
                                 </div>
                             )}
                         </div>
+                    </div>
+                </div>
+                 {/* Footer: Created At */}
+                <div className="mt-3 pt-2 flex items-center justify-end border-t border-gray-200">
+                    <div className="text-[10px] text-gray-400 font-medium">
+                        Criado em: {formatCreationDate(lead.createdAt)}
                     </div>
                 </div>
             </div>
@@ -495,38 +530,49 @@ const RenewedCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void }> = ({ le
 };
 
 export const RenewedList: React.FC<RenewedListProps> = ({ leads, onUpdateLead }) => {
-  // Filter leads that have dealInfo AND are CLOSED (Renovados)
-  const renewedLeads = leads.filter(l => l.dealInfo && l.status === LeadStatus.CLOSED);
-
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterDate, setFilterDate] = useState(() => {
-    const now = new Date();
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    return `${now.getFullYear()}-${month}`;
-  });
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterDate, setFilterDate] = useState<string>(''); // YYYY-MM
 
-  const filteredRenewed = renewedLeads.filter(lead => {
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterDate]);
+
+  const filteredLeads = leads.filter(lead => {
     const term = searchTerm.toLowerCase();
     const name = lead.name || '';
     const phone = lead.phone || '';
+    
     const matchesSearch = name.toLowerCase().includes(term) || phone.includes(term);
     
-    const matchesStatus = filterStatus === 'all' || lead.status === filterStatus;
-    
-    // Date Filter: Checks if Deal START Date matches YYYY-MM (Initial Validity)
     let matchesDate = true;
     if (filterDate && lead.dealInfo?.startDate) {
-        const startDate = lead.dealInfo.startDate; // YYYY-MM-DD
-        matchesDate = startDate.startsWith(filterDate);
+        matchesDate = lead.dealInfo.startDate.startsWith(filterDate);
     }
 
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesDate;
   });
+
+  // Calculate Pagination
+  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+  const paginatedLeads = filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(p => p + 1);
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) setCurrentPage(p => p - 1);
+  };
 
   return (
     <div className="h-full flex flex-col">
-       <div className="mb-4 flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+      {/* Header Controls */}
+      <div className="mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
         <div className="flex items-center gap-2">
             <div className="p-1.5 bg-green-100 text-green-600 rounded-lg">
                 <CheckCircle className="w-5 h-5" />
@@ -537,50 +583,66 @@ export const RenewedList: React.FC<RenewedListProps> = ({ leads, onUpdateLead })
         </div>
         
         <div className="flex flex-col md:flex-row gap-2 flex-wrap">
-             <div className="relative flex-grow md:flex-grow-0 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input 
-                  type="text" 
-                  placeholder="Nome ou Telefone..." 
-                  className="pl-9 pr-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-
-              <input 
-                type="month"
-                className="border border-gray-300 rounded text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-gray-700"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-              />
-
-              <select 
-                className="border border-gray-300 rounded text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white cursor-pointer text-gray-700"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="all">Todos Status</option>
-                {Object.values(LeadStatus).map(status => (
-                    <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
+          <div className="relative flex-grow md:flex-grow-0 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input 
+              type="text" 
+              placeholder="Nome ou Telefone..." 
+              className="pl-9 pr-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-green-500 w-full"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <input 
+            type="month"
+            className="border border-gray-300 rounded text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white text-gray-700"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+          />
         </div>
       </div>
 
+      {/* List Layout - Stacked Cards */}
       <div className="flex flex-col gap-3 pb-4 overflow-y-auto w-full max-w-4xl mx-auto px-1 flex-1">
-        {filteredRenewed.length > 0 ? (
-            filteredRenewed.map((lead) => (
-                <RenewedCard key={lead.id} lead={lead} onUpdate={onUpdateLead} />
-            ))
-        ) : (
+        {paginatedLeads.map((lead) => (
+            <RenewedCard 
+                key={lead.id} 
+                lead={lead} 
+                onUpdate={onUpdateLead}
+            />
+        ))}
+
+        {paginatedLeads.length === 0 && (
             <div className="py-10 text-center text-gray-500 bg-white rounded-lg border-2 border-dashed border-gray-300">
                 <CheckCircle className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm font-medium">Nenhum lead renovado encontrado para este período.</p>
-                <p className="text-xs text-gray-400 mt-1">Verifique o filtro de mês de vigência inicial.</p>
+                <p className="text-sm font-medium">Nenhum renovado encontrado.</p>
             </div>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-4 py-4 bg-white border-t border-gray-200 mt-auto">
+            <button 
+                onClick={handlePrevPage} 
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
+            >
+                Anterior
+            </button>
+            <span className="text-sm text-gray-600 font-medium">
+                Página {currentPage} de {totalPages}
+            </span>
+            <button 
+                onClick={handleNextPage} 
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 rounded border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
+            >
+                Próximo
+            </button>
+        </div>
+      )}
     </div>
   );
 };
