@@ -67,10 +67,20 @@ const RenewedCard: React.FC<{ lead: Lead, onUpdate: (l: Lead) => void }> = ({ le
 
     useEffect(() => {
         if (dealForm.startDate) {
-            const start = new Date(dealForm.startDate);
-            const end = new Date(start);
-            end.setFullYear(end.getFullYear() + 1);
-            setDealForm(prev => ({ ...prev, endDate: end.toISOString().split('T')[0] }));
+            let dateStr = dealForm.startDate;
+            if (dateStr.includes('/')) {
+                const [d, m, y] = dateStr.split('/');
+                dateStr = `${y}-${m}-${d}`;
+            }
+
+            const start = new Date(dateStr);
+            if (!isNaN(start.getTime())) {
+                const end = new Date(start);
+                end.setFullYear(end.getFullYear() + 1);
+                try {
+                    setDealForm(prev => ({ ...prev, endDate: end.toISOString().split('T')[0] }));
+                } catch(e) { console.error(e) }
+            }
         }
     }, [dealForm.startDate]);
 
@@ -574,11 +584,11 @@ export const RenewedList: React.FC<RenewedListProps> = ({ leads, onUpdateLead })
       {/* Header Controls */}
       <div className="mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
         <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-green-100 text-green-600 rounded-lg">
+            <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
                 <CheckCircle className="w-5 h-5" />
             </div>
             <div>
-                <h2 className="text-lg font-bold text-gray-800">Renovados</h2>
+                <h2 className="text-lg font-bold text-gray-800">Leads Renovados</h2>
             </div>
         </div>
         
@@ -588,7 +598,7 @@ export const RenewedList: React.FC<RenewedListProps> = ({ leads, onUpdateLead })
             <input 
               type="text" 
               placeholder="Nome ou Telefone..." 
-              className="pl-9 pr-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-green-500 w-full"
+              className="pl-9 pr-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 w-full"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -596,7 +606,7 @@ export const RenewedList: React.FC<RenewedListProps> = ({ leads, onUpdateLead })
           
           <input 
             type="month"
-            className="border border-gray-300 rounded text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-green-500 bg-white text-gray-700"
+            className="border border-gray-300 rounded text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-gray-700"
             value={filterDate}
             onChange={(e) => setFilterDate(e.target.value)}
           />
