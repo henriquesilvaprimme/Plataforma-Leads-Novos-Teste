@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { LeadList } from './components/LeadList';
@@ -7,6 +6,7 @@ import { RenewedList } from './components/RenewedList';
 import { InsuredList } from './components/InsuredList';
 import { UserList } from './components/UserList';
 import { Ranking } from './components/Ranking';
+import { Login } from './components/Login';
 import { Lead, LeadStatus, User } from './types';
 import { LayoutDashboard, Users, RefreshCw, CheckCircle, FileText, UserCog, Trophy, AlertTriangle, Power } from './components/Icons';
 import { 
@@ -21,7 +21,7 @@ import {
 type View = 'dashboard' | 'leads' | 'renewals' | 'renewed' | 'insured' | 'users' | 'ranking';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<View>('leads');
+  const [currentView, setCurrentView] = useState<View>('dashboard');
   
   // COLEÇÕES DO FIREBASE
   const [leadsCollection, setLeadsCollection] = useState<Lead[]>([]); 
@@ -32,17 +32,8 @@ export default function App() {
   // STATS
   const [manualRenewalTotal, setManualRenewalTotal] = useState<number>(0);
 
-  // USUÁRIO ATUAL (Simulação de Login)
+  // USUÁRIO ATUAL
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-
-  // Inicializa o usuário atual assim que a coleção de usuários carregar (pega o primeiro admin ou o primeiro que vier)
-  useEffect(() => {
-    if (usersCollection.length > 0 && !currentUser) {
-        const admin = usersCollection.find(u => u.isAdmin && u.isActive);
-        if (admin) setCurrentUser(admin);
-        else setCurrentUser(usersCollection[0]);
-    }
-  }, [usersCollection]);
 
   // === FIREBASE SUBSCRIPTIONS ===
   useEffect(() => {
@@ -104,6 +95,8 @@ export default function App() {
 
   // Redirecionamento de segurança se a view atual não for permitida
   useEffect(() => {
+    if (!currentUser) return;
+    
     if (isComum && !['dashboard', 'leads', 'ranking'].includes(currentView)) {
         setCurrentView('dashboard');
     }
@@ -111,7 +104,12 @@ export default function App() {
     if (isRenovations && !['dashboard', 'renewals', 'renewed'].includes(currentView)) {
         setCurrentView('dashboard');
     }
-  }, [currentView, isComum, isRenovations]);
+  }, [currentView, isComum, isRenovations, currentUser]);
+
+  // LOGIN SCREEN
+  if (!currentUser) {
+      return <Login users={usersCollection} onLogin={setCurrentUser} />;
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900 font-sans overflow-hidden">
@@ -208,33 +206,25 @@ export default function App() {
           )}
         </nav>
 
-        {/* User Selector for Testing Roles */}
+        {/* User Profile */}
         <div className="p-4 border-t border-slate-800 bg-slate-950">
-          <label className="text-[10px] text-slate-500 uppercase font-bold mb-1 block">Simular Acesso Como:</label>
-          <select 
-            className="w-full bg-slate-800 border border-slate-700 text-xs text-white rounded px-2 py-1 outline-none"
-            value={currentUser?.id || ''}
-            onChange={(e) => {
-                const user = usersCollection.find(u => u.id === e.target.value);
-                if (user) setCurrentUser(user);
-            }}
-          >
-            {usersCollection.map(u => (
-                <option key={u.id} value={u.id}>
-                    {u.name} ({u.isAdmin ? 'Admin' : u.isRenovations ? 'Renov.' : 'Comum'})
-                </option>
-            ))}
-          </select>
-          <div className="mt-2 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-xs">
-              {(currentUser?.name || 'A').charAt(0)}
+          <div className="flex items-center gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-white ${currentUser?.avatarColor || 'bg-indigo-600'}`}>
+              {(currentUser?.name || 'U').charAt(0)}
             </div>
-            <div className="overflow-hidden">
+            <div className="overflow-hidden flex-1">
               <p className="text-xs font-medium truncate">{currentUser?.name}</p>
               <p className="text-[10px] text-slate-500 truncate">
                   {currentUser?.isAdmin ? 'Administrador' : currentUser?.isRenovations ? 'Renovações' : 'Comum'}
               </p>
             </div>
+            <button 
+                onClick={() => setCurrentUser(null)} 
+                className="text-slate-400 hover:text-white"
+                title="Sair"
+            >
+                <Power className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </aside>
@@ -243,7 +233,7 @@ export default function App() {
       <main className="flex-1 flex flex-col h-full overflow-hidden relative pt-6">
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 md:hidden">
             <h1 className="font-bold text-gray-800">Leads AI</h1>
-            <button className="p-2 text-gray-600">☰</button>
+            <button onClick={() => setCurrentUser(null)} className="text-red-500 text-sm font-bold">Sair</button>
         </header>
 
         <div className="flex-1 overflow-auto p-6 md:p-8 relative bg-gray-100">
