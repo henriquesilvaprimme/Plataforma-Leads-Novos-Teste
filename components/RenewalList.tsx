@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Lead, LeadStatus, User, DealInfo } from '../types';
 import { Car, Phone, Calendar, DollarSign, Percent, CreditCard, Users, RefreshCw, Bell, Search, Shield, AlertTriangle, Edit, Check, Plus } from './Icons';
@@ -50,7 +51,6 @@ const formatCreationDate = (dateString?: string) => {
 
 const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => void, onAdd: (l: Lead) => void, currentUser: User | null }> = ({ lead, users, onUpdate, onAdd, currentUser }) => {
     const [isEditingStatus, setIsEditingStatus] = useState(lead.status === LeadStatus.NEW);
-    // FIX: Initialize based on whether there is an assigned user
     const [isEditingUser, setIsEditingUser] = useState(!lead.assignedTo);
     const [isEditingNotes, setIsEditingNotes] = useState(false);
 
@@ -60,7 +60,7 @@ const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => 
     const [scheduleDate, setScheduleDate] = useState<string>(lead.scheduledDate || '');
 
     const [showDealModal, setShowDealModal] = useState(false);
-    const [dealForm, setDealForm] = useState<DealInfo & { leadName: string }>({
+    const [dealForm, setDealForm] = useState<DealInfo & { leadName: string, cartaoPortoNovo: boolean }>({
         leadName: lead.name,
         insurer: lead.dealInfo?.insurer || '',
         paymentMethod: lead.dealInfo?.paymentMethod || '',
@@ -68,7 +68,8 @@ const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => 
         commission: lead.dealInfo?.commission || 0,
         installments: lead.dealInfo?.installments || '',
         startDate: new Date().toISOString().split('T')[0],
-        endDate: ''
+        endDate: '',
+        cartaoPortoNovo: false
     });
 
     // Endorsement State
@@ -111,7 +112,7 @@ const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => 
              setSelectedStatus("");
         }
         setSelectedUser(lead.assignedTo || '');
-        // FIX: Update edit mode if assignedTo changes externally to null
+        
         if (!lead.assignedTo) setIsEditingUser(true);
         
         setDealForm(prev => ({ ...prev, leadName: lead.name }));
@@ -157,6 +158,7 @@ const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => 
             name: dealForm.leadName,
             status: LeadStatus.CLOSED,
             assignedTo: lead.assignedTo || "Henrique Silva",
+            cartaoPortoNovo: dealForm.cartaoPortoNovo,
             dealInfo: {
                 insurer: dealForm.insurer,
                 paymentMethod: dealForm.paymentMethod,
@@ -301,6 +303,13 @@ const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => 
                         </div>
 
                         <div className="flex items-center gap-2">
+                            <Shield className="w-3 h-3 text-gray-400 shrink-0" />
+                            <span className="text-gray-700 font-medium">Seguradora: 
+                                <span className="text-gray-900 ml-1">{lead.dealInfo?.insurer || '-'}</span>
+                            </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
                             <DollarSign className="w-3 h-3 text-gray-400 shrink-0" />
                             <span className="text-gray-700 font-medium">Prêmio: 
                                 <span className="text-gray-900 ml-1">
@@ -389,7 +398,6 @@ const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => 
                                     </span>
                                 </div>
                             ) : (
-                                // FIX: Removed || !selectedUser from check to prevent premature toggle
                                 isEditingUser ? (
                                     <div className="flex gap-1 w-fit max-w-full">
                                         <select 
@@ -549,21 +557,39 @@ const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => 
                                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-white"
                                  >
                                     <option value="">Selecione</option>
-                                    <option value="Cartão Porto Seguro">Cartão Porto Seguro</option>
-                                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                    <option value="Débito">Débito</option>
+                                    <option value="CP">Cartão Porto Seguro</option>
+                                    <option value="CC">Cartão de Crédito</option>
+                                    <option value="Debito">Débito</option>
                                     <option value="Boleto">Boleto</option>
                                  </select>
+                                 {dealForm.paymentMethod === 'CP' && (
+                                    <div className="flex items-center gap-2 mt-2 p-2 bg-blue-50 rounded border border-blue-100">
+                                        <input 
+                                            type="checkbox" 
+                                            id="cpNovo"
+                                            checked={dealForm.cartaoPortoNovo}
+                                            onChange={(e) => setDealForm({...dealForm, cartaoPortoNovo: e.target.checked})}
+                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="cpNovo" className="text-xs font-bold text-blue-800 uppercase select-none cursor-pointer">
+                                            Cartão Porto Novo?
+                                        </label>
+                                    </div>
+                                 )}
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Prêmio Líquido (R$)</label>
                                 <input 
-                                    type="number"
+                                    type="text"
                                     placeholder="0,00"
-                                    value={dealForm.netPremium || ''}
-                                    onChange={(e) => setDealForm({...dealForm, netPremium: parseFloat(e.target.value)})}
+                                    value={dealForm.netPremium.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    onChange={(e) => {
+                                        const raw = e.target.value.replace(/\D/g, '');
+                                        const val = raw ? parseInt(raw, 10) / 100 : 0;
+                                        setDealForm(prev => ({ ...prev, netPremium: val }));
+                                    }}
                                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none"
                                 />
                             </div>
@@ -624,301 +650,288 @@ const RenewalCard: React.FC<{ lead: Lead, users: User[], onUpdate: (l: Lead) => 
 };
 
 export const RenewalList: React.FC<RenewalListProps> = ({ leads, users, onUpdateLead, onAddLead, currentUser }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  // Filtro de Data iniciando com o Mês Atual
-  const [filterDate, setFilterDate] = useState<string>(() => new Date().toISOString().slice(0, 7)); 
-  
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterDate, setFilterDate] = useState<string>(() => new Date().toISOString().slice(0, 7));
+    const [filterStatus, setFilterStatus] = useState<string>('all');
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    
+    // State for creating a new renewal manually
+    const [newRenewalForm, setNewRenewalForm] = useState({
+        name: '', phone: '', vehicleModel: '', vehicleYear: '', city: '',
+        insurer: '', paymentMethod: '', netPremium: 0, commission: 0, installments: '',
+        startDate: '', endDate: '', assignedTo: ''
+    });
 
-  // New Renewal State
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newRenewalForm, setNewRenewalForm] = useState({
-      name: '', vehicleModel: '', vehicleYear: '', city: '', phone: '', insuranceType: 'Renovação', 
-      insurer: '', paymentMethod: '', netPremium: 0, commission: 0, installments: '', 
-      startDate: '', endDate: '', assignedTo: ''
-  });
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 10;
 
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, filterStatus, filterDate]);
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, filterDate, filterStatus]);
 
-  const filteredLeads = leads.filter(lead => {
-    const term = searchTerm.toLowerCase();
-    const name = lead.name || '';
-    const phone = lead.phone || '';
-    const matchesSearch = name.toLowerCase().includes(term) || phone.includes(term); 
-    const matchesStatus = filterStatus === 'all' 
-      ? lead.status !== LeadStatus.LOST // Se 'all', esconde perdidos
-      : lead.status === filterStatus; // Se selecionou 'LOST', mostra
+    const filteredLeads = leads.filter(lead => {
+        const term = searchTerm.toLowerCase();
+        const name = lead.name || '';
+        const phone = lead.phone || '';
+        const matchesSearch = name.toLowerCase().includes(term) || phone.includes(term);
 
-    let matchesDate = true;
-    if (filterDate) {
-        // Filtra pela Vigência Final (Mês de Renovação)
-        const endDate = lead.dealInfo?.endDate || '';
-        if (endDate && endDate.includes('-')) {
-             matchesDate = endDate.startsWith(filterDate);
-        } else {
-             // Se não tiver data de vigência final e o filtro estiver ativo, considera false.
-             matchesDate = false;
+        const matchesStatus = filterStatus === 'all' || lead.status === filterStatus;
+
+        let matchesDate = true;
+        if (filterDate) {
+            const endDate = lead.dealInfo?.endDate || '';
+            matchesDate = endDate.startsWith(filterDate);
         }
-    }
 
-    const isAssignedToUser = !currentUser || currentUser.isAdmin || lead.assignedTo === currentUser.name;
+        // Somente Admin vê tudo. Outros (incluindo Renovações e Comum) veem apenas o que lhes foi atribuído
+        const isAssignedToUser = !currentUser || currentUser.isAdmin || lead.assignedTo === currentUser.name; 
 
-    return matchesSearch && matchesStatus && matchesDate && isAssignedToUser;
-  }).sort((a, b) => {
-    const dateA = new Date(a.createdAt).getTime();
-    const dateB = new Date(b.createdAt).getTime();
-    return dateB - dateA;
-  });
+        return matchesSearch && matchesStatus && matchesDate && isAssignedToUser;
+    }).sort((a, b) => {
+         const dateA = a.dealInfo?.endDate ? new Date(a.dealInfo.endDate).getTime() : 0;
+         const dateB = b.dealInfo?.endDate ? new Date(b.dealInfo.endDate).getTime() : 0;
+         return dateA - dateB || 0;
+    });
 
-  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
-  const paginatedLeads = filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+    const paginatedLeads = filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(p => p + 1); };
-  const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(p => p - 1); };
+    const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(p => p + 1); };
+    const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(p => p - 1); };
 
-  const handleCreateRenewal = () => {
-      const newLead: Lead = {
-          id: Date.now().toString(),
-          name: newRenewalForm.name,
-          vehicleModel: newRenewalForm.vehicleModel,
-          vehicleYear: newRenewalForm.vehicleYear,
-          city: newRenewalForm.city,
-          phone: newRenewalForm.phone,
-          insuranceType: newRenewalForm.insuranceType,
-          assignedTo: newRenewalForm.assignedTo,
-          status: LeadStatus.NEW,
-          createdAt: new Date().toISOString(),
-          email: '', 
-          notes: '',
-          dealInfo: {
-              insurer: newRenewalForm.insurer,
-              paymentMethod: newRenewalForm.paymentMethod,
-              netPremium: newRenewalForm.netPremium,
-              commission: newRenewalForm.commission,
-              installments: newRenewalForm.installments,
-              startDate: newRenewalForm.startDate,
-              endDate: newRenewalForm.endDate,
-          }
-      };
-      // App.tsx handles sending this to 'renovacoes' based on insuranceType
-      onAddLead(newLead);
-      setShowCreateModal(false);
-      setNewRenewalForm({
-          name: '', vehicleModel: '', vehicleYear: '', city: '', phone: '', insuranceType: 'Renovação', 
-          insurer: '', paymentMethod: '', netPremium: 0, commission: 0, installments: '', 
-          startDate: '', endDate: '', assignedTo: ''
-      });
-  };
+    const handleCreateRenewal = () => {
+         const newLead: Lead = {
+           id: Date.now().toString(),
+           name: newRenewalForm.name,
+           phone: newRenewalForm.phone,
+           vehicleModel: newRenewalForm.vehicleModel,
+           vehicleYear: newRenewalForm.vehicleYear,
+           city: newRenewalForm.city,
+           insuranceType: 'Renovação', 
+           status: LeadStatus.NEW,
+           createdAt: new Date().toISOString(),
+           assignedTo: newRenewalForm.assignedTo,
+           email: '', notes: '',
+           dealInfo: {
+               insurer: newRenewalForm.insurer,
+               paymentMethod: newRenewalForm.paymentMethod,
+               netPremium: newRenewalForm.netPremium,
+               commission: newRenewalForm.commission,
+               installments: newRenewalForm.installments,
+               startDate: newRenewalForm.startDate,
+               endDate: newRenewalForm.endDate,
+           }
+         };
+         onAddLead(newLead);
+         setShowCreateModal(false);
+         setNewRenewalForm({
+            name: '', phone: '', vehicleModel: '', vehicleYear: '', city: '',
+            insurer: '', paymentMethod: '', netPremium: 0, commission: 0, installments: '',
+            startDate: '', endDate: '', assignedTo: ''
+         });
+    };
 
-  return (
-    <div className="h-full flex flex-col">
-      <div className="mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-        <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg">
-                <RefreshCw className="w-5 h-5" />
-            </div>
-            <div>
-                <h2 className="text-lg font-bold text-gray-800">Renovações</h2>
-            </div>
-        </div>
-        
-        <div className="flex flex-col md:flex-row gap-2 flex-wrap">
-          <div className="relative flex-grow md:flex-grow-0 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input 
-              type="text" 
-              placeholder="Nome ou Telefone..." 
-              className="pl-9 pr-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <input 
-            type="month"
-            className="border border-gray-300 rounded text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-gray-700"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-          />
-
-          <select 
-            className="border border-gray-300 rounded text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white cursor-pointer text-gray-700"
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-          >
-            <option value="all">Todos Status</option>
-            {Object.values(LeadStatus).map(status => (
-                <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
-
-          {/* Botão Nova Renovação apenas para Admin */}
-          {currentUser?.isAdmin && (
-            <button 
-                onClick={() => setShowCreateModal(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded transition-all shadow-sm flex items-center justify-center gap-2 text-sm font-bold"
-            >
-                <Plus className="w-4 h-4" />
-                Nova Renovação
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-4 pb-4 overflow-y-auto w-full px-1 flex-1">
-        {paginatedLeads.map((lead) => (
-            <RenewalCard 
-                key={lead.id} 
-                lead={lead}
-                users={users} 
-                onUpdate={onUpdateLead}
-                onAdd={onAddLead}
-                currentUser={currentUser}
-            />
-        ))}
-
-        {paginatedLeads.length === 0 && (
-            <div className="py-10 text-center text-gray-500 bg-white rounded-lg border-2 border-dashed border-gray-300">
-                <RefreshCw className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm font-medium">Nenhuma renovação encontrada.</p>
-            </div>
-        )}
-      </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 py-4 bg-white border-t border-gray-200 mt-auto">
-            <button 
-                onClick={handlePrevPage} 
-                disabled={currentPage === 1}
-                className="px-3 py-1 rounded border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
-            >
-                Anterior
-            </button>
-            <span className="text-sm text-gray-600 font-medium">Página {currentPage} de {totalPages}</span>
-            <button 
-                onClick={handleNextPage} 
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-gray-700"
-            >
-                Próximo
-            </button>
-        </div>
-      )}
-
-      {/* MODAL CRIAR RENOVAÇÃO */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[95vh]">
-                <div className="bg-indigo-600 px-6 py-4 flex justify-between items-center">
-                    <h2 className="text-white font-bold text-lg flex items-center gap-2"><RefreshCw className="w-5 h-5" />Nova Renovação</h2>
-                    <button onClick={() => setShowCreateModal(false)} className="text-white/80 hover:text-white transition-colors">✕</button>
-                </div>
-                <div className="p-6 space-y-4 overflow-y-auto">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nome Completo</label>
-                            <input type="text" value={newRenewalForm.name} onChange={(e) => setNewRenewalForm({...newRenewalForm, name: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Telefone</label>
-                            <input type="text" value={newRenewalForm.phone} onChange={(e) => setNewRenewalForm({...newRenewalForm, phone: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                        </div>
+    return (
+        <div className="h-full flex flex-col">
+            <div className="mb-6 flex flex-col xl:flex-row xl:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-lg">
+                        <RefreshCw className="w-5 h-5" />
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Modelo do Veículo</label>
-                            <input type="text" value={newRenewalForm.vehicleModel} onChange={(e) => setNewRenewalForm({...newRenewalForm, vehicleModel: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Ano/Modelo</label>
-                            <input type="text" value={newRenewalForm.vehicleYear} onChange={(e) => setNewRenewalForm({...newRenewalForm, vehicleYear: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Cidade</label>
-                            <input type="text" value={newRenewalForm.city} onChange={(e) => setNewRenewalForm({...newRenewalForm, city: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                        </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-800">Renovações</h2>
+                    </div>
+                </div>
+                
+                <div className="flex flex-col md:flex-row gap-2 flex-wrap">
+                    <div className="relative flex-grow md:flex-grow-0 min-w-[200px]">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                        <input 
+                          type="text" 
+                          placeholder="Nome ou Telefone..." 
+                          className="pl-9 pr-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
                     
-                    <div className="border-t border-gray-100 my-2 pt-2">
-                        <p className="text-xs font-bold text-indigo-600 mb-3 uppercase">Dados da Apólice Anterior</p>
-                        <div className="grid grid-cols-2 gap-4 mb-3">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Seguradora</label>
-                                <select 
-                                    value={newRenewalForm.insurer}
-                                    onChange={(e) => setNewRenewalForm({...newRenewalForm, insurer: e.target.value})}
-                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                                >
-                                    <option value="">Selecione</option>
-                                    {INSURERS_LIST.map(ins => (
-                                        <option key={ins} value={ins}>{ins}</option>
-                                    ))}
-                                </select>
+                    <input 
+                        type="month"
+                        className="border border-gray-300 rounded text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white text-gray-700"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                    />
+
+                    <select 
+                        className="border border-gray-300 rounded text-sm px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white cursor-pointer text-gray-700"
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                    >
+                        <option value="all">Todos Status</option>
+                        {Object.values(LeadStatus).filter(s => s !== LeadStatus.CLOSED).map(status => (
+                            <option key={status} value={status}>{status}</option>
+                        ))}
+                    </select>
+                    
+                    {(currentUser?.isAdmin || currentUser?.isRenovations) && (
+                        <button 
+                            onClick={() => setShowCreateModal(true)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded transition-all shadow-sm flex items-center justify-center gap-2 text-sm font-bold"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Nova
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            <div className="flex flex-col gap-4 pb-4 overflow-y-auto w-full px-1 flex-1">
+                {paginatedLeads.map((lead) => (
+                    <RenewalCard 
+                        key={lead.id} 
+                        lead={lead} 
+                        users={users}
+                        onUpdate={onUpdateLead} 
+                        onAdd={onAddLead}
+                        currentUser={currentUser}
+                    />
+                ))}
+
+                {paginatedLeads.length === 0 && (
+                    <div className="py-10 text-center text-gray-500 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                        <RefreshCw className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm font-medium">Nenhuma renovação encontrada.</p>
+                    </div>
+                )}
+            </div>
+
+            {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-4 py-4 bg-white border-t border-gray-200 mt-auto">
+                    <button onClick={handlePrevPage} disabled={currentPage === 1} className="px-3 py-1 rounded border border-gray-300 text-sm font-medium disabled:opacity-50 hover:bg-gray-50 text-gray-700">Anterior</button>
+                    <span className="text-sm text-gray-600 font-medium">Página {currentPage} de {totalPages}</span>
+                    <button onClick={handleNextPage} disabled={currentPage === totalPages} className="px-3 py-1 rounded border border-gray-300 text-sm font-medium disabled:opacity-50 hover:bg-gray-50 text-gray-700">Próximo</button>
+                </div>
+            )}
+
+            {showCreateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[95vh]">
+                        <div className="bg-indigo-600 px-6 py-4 flex justify-between items-center">
+                            <h2 className="text-white font-bold text-lg flex items-center gap-2"><RefreshCw className="w-5 h-5" />Nova Renovação</h2>
+                            <button onClick={() => setShowCreateModal(false)} className="text-white/80 hover:text-white transition-colors">✕</button>
+                        </div>
+                        <div className="p-6 space-y-4 overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nome Completo</label>
+                                    <input type="text" value={newRenewalForm.name} onChange={(e) => setNewRenewalForm({...newRenewalForm, name: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Telefone</label>
+                                    <input type="text" value={newRenewalForm.phone} onChange={(e) => setNewRenewalForm({...newRenewalForm, phone: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Meio de Pagamento</label>
-                                <select 
-                                    value={newRenewalForm.paymentMethod}
-                                    onChange={(e) => setNewRenewalForm({...newRenewalForm, paymentMethod: e.target.value})}
-                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                                >
-                                    <option value="">Selecione</option>
-                                    <option value="Cartão Porto Seguro">Cartão Porto Seguro</option>
-                                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                    <option value="Débito">Débito</option>
-                                    <option value="Boleto">Boleto</option>
-                                </select>
+                             <div className="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Modelo do Veículo</label>
+                                    <input type="text" value={newRenewalForm.vehicleModel} onChange={(e) => setNewRenewalForm({...newRenewalForm, vehicleModel: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Ano/Modelo</label>
+                                    <input type="text" value={newRenewalForm.vehicleYear} onChange={(e) => setNewRenewalForm({...newRenewalForm, vehicleYear: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Cidade</label>
+                                    <input type="text" value={newRenewalForm.city} onChange={(e) => setNewRenewalForm({...newRenewalForm, city: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                </div>
+                            </div>
+                            
+                            <div className="border-t border-gray-100 my-2 pt-2">
+                                <p className="text-xs font-bold text-indigo-600 mb-3 uppercase">Dados da Apólice Anterior</p>
+                                <div className="grid grid-cols-2 gap-4 mb-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Seguradora</label>
+                                        <select 
+                                            value={newRenewalForm.insurer}
+                                            onChange={(e) => setNewRenewalForm({...newRenewalForm, insurer: e.target.value})}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                                        >
+                                            <option value="">Selecione</option>
+                                            {INSURERS_LIST.map(ins => (
+                                                <option key={ins} value={ins}>{ins}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Meio de Pagamento</label>
+                                        <select 
+                                            value={newRenewalForm.paymentMethod}
+                                            onChange={(e) => setNewRenewalForm({...newRenewalForm, paymentMethod: e.target.value})}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                                        >
+                                            <option value="">Selecione</option>
+                                            <option value="CP">Cartão Porto Seguro</option>
+                                            <option value="CC">Cartão de Crédito</option>
+                                            <option value="Debito">Débito</option>
+                                            <option value="Boleto">Boleto</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4 mb-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Prêmio Líquido</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="0,00"
+                                            value={newRenewalForm.netPremium.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} 
+                                            onChange={(e) => {
+                                                const raw = e.target.value.replace(/\D/g, '');
+                                                const val = raw ? parseInt(raw, 10) / 100 : 0;
+                                                setNewRenewalForm({...newRenewalForm, netPremium: val});
+                                            }}
+                                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" 
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Comissão (%)</label>
+                                        <input type="number" value={newRenewalForm.commission || ''} onChange={(e) => setNewRenewalForm({...newRenewalForm, commission: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Parcelamento</label>
+                                        <select value={newRenewalForm.installments} onChange={(e) => setNewRenewalForm({...newRenewalForm, installments: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                            <option value="">Selecione</option>
+                                            {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
+                                                <option key={num} value={`${num}x`}>{num}x</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 mb-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Início Vigência</label>
+                                        <input type="date" value={newRenewalForm.startDate} onChange={(e) => setNewRenewalForm({...newRenewalForm, startDate: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Final Vigência</label>
+                                        <input type="date" value={newRenewalForm.endDate} onChange={(e) => setNewRenewalForm({...newRenewalForm, endDate: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                    </div>
+                                </div>
+                                <div>
+                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Responsável</label>
+                                     <select value={newRenewalForm.assignedTo} onChange={(e) => setNewRenewalForm({...newRenewalForm, assignedTo: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                                        <option value="">-- Selecione --</option>
+                                        {users.filter(u => u.isActive).map(u => (
+                                            <option key={u.id} value={u.name}>{u.name}</option>
+                                        ))}
+                                     </select>
+                                </div>
                             </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-4 mb-3">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Prêmio Líquido</label>
-                                <input type="number" value={newRenewalForm.netPremium || ''} onChange={(e) => setNewRenewalForm({...newRenewalForm, netPremium: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Comissão (%)</label>
-                                <input type="number" value={newRenewalForm.commission || ''} onChange={(e) => setNewRenewalForm({...newRenewalForm, commission: Number(e.target.value)})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Parcelamento</label>
-                                <select value={newRenewalForm.installments} onChange={(e) => setNewRenewalForm({...newRenewalForm, installments: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                    <option value="">Selecione</option>
-                                    {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
-                                        <option key={num} value={`${num}x`}>{num}x</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 mb-3">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Início Vigência</label>
-                                <input type="date" value={newRenewalForm.startDate} onChange={(e) => setNewRenewalForm({...newRenewalForm, startDate: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Final Vigência</label>
-                                <input type="date" value={newRenewalForm.endDate} onChange={(e) => setNewRenewalForm({...newRenewalForm, endDate: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                            </div>
-                        </div>
-                        <div>
-                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Responsável</label>
-                             <select value={newRenewalForm.assignedTo} onChange={(e) => setNewRenewalForm({...newRenewalForm, assignedTo: e.target.value})} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                                <option value="">-- Selecione --</option>
-                                {users.filter(u => u.isActive).map(u => (
-                                    <option key={u.id} value={u.name}>{u.name}</option>
-                                ))}
-                             </select>
+                        <div className="p-6 pt-0 flex gap-3 mt-auto bg-gray-50 border-t border-gray-100 py-4">
+                            <button onClick={() => setShowCreateModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-white hover:shadow-sm font-bold text-sm transition-all">Cancelar</button>
+                            <button onClick={handleCreateRenewal} disabled={!newRenewalForm.name} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-bold text-sm shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed">Criar Renovação</button>
                         </div>
                     </div>
                 </div>
-                <div className="p-6 pt-0 flex gap-3 mt-auto bg-gray-50 border-t border-gray-100 py-4">
-                    <button onClick={() => setShowCreateModal(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-white hover:shadow-sm font-bold text-sm transition-all">Cancelar</button>
-                    <button onClick={handleCreateRenewal} disabled={!newRenewalForm.name} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 font-bold text-sm shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed">Criar Renovação</button>
-                </div>
-            </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 };
